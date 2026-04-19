@@ -1,21 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, Filter } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronDown, Search } from 'lucide-react';
 import { Event } from '../types';
 import { EventCard } from '../components/EventCard';
 import { SearchBar } from '../components/SearchBar';
-import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
 import { CITIES, CATEGORIES } from '../utils/theme';
 import { eventsService } from '../services/supabase';
 
-export const DiscoveryScreen: React.FC = () => {
+export const DiscoveryScreen = () => {
   const [events, setEvents] = useState<Event[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCity, setSelectedCity] = useState<string | null>('Johannesburg');
+  const [selectedCity, setSelectedCity] = useState<string>('Johannesburg');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showCityPicker, setShowCityPicker] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     loadEvents();
@@ -26,7 +25,6 @@ export const DiscoveryScreen: React.FC = () => {
       setLoading(true);
       const data = await eventsService.getEvents();
       setEvents(data || []);
-      filterEvents(data || [], selectedCity, selectedCategory, searchQuery);
     } catch (error) {
       console.error('Error loading events:', error);
     } finally {
@@ -34,144 +32,209 @@ export const DiscoveryScreen: React.FC = () => {
     }
   };
 
-  const filterEvents = (eventsToFilter: Event[], city: string | null, category: string | null, query: string) => {
-    let result = eventsToFilter;
-
-    if (city) {
-      result = result.filter(e => e.city === city);
-    }
-
-    if (category) {
-      result = result.filter(e => e.category === category);
-    }
-
-    if (query) {
-      result = result.filter(e =>
-        e.title.toLowerCase().includes(query.toLowerCase()) ||
-        e.description.toLowerCase().includes(query.toLowerCase())
+  const cityEvents = events.filter(e => e.city === selectedCity);
+  const filteredEvents = cityEvents.filter(event => {
+    if (selectedCategory && event.category !== selectedCategory) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return (
+        event.title.toLowerCase().includes(q) ||
+        event.description.toLowerCase().includes(q) ||
+        event.venue.toLowerCase().includes(q)
       );
     }
+    return true;
+  });
 
-    setFilteredEvents(result);
-  };
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    filterEvents(events, selectedCity, selectedCategory, query);
-  };
-
-  const handleCityChange = (city: string) => {
-    setSelectedCity(city);
-    filterEvents(events, city, selectedCategory, searchQuery);
-  };
-
-  const handleCategoryChange = (category: string) => {
-    const newCategory = selectedCategory === category ? null : category;
-    setSelectedCategory(newCategory);
-    filterEvents(events, selectedCity, newCategory, searchQuery);
-  };
+  const featuredEvent = filteredEvents[0];
+  const thisWeekend = filteredEvents.slice(1, 5);
+  const rest = filteredEvents.slice(5);
 
   return (
-    <div className="pb-20">
-      {/* Header */}
-      <div className="bg-gigabyte-dark p-4 sticky top-0 z-10 border-b border-gigabyte-surface">
-        <Logo size="md" className="mb-4" />
-        <SearchBar
-          value={searchQuery}
-          onChange={handleSearch}
-          placeholder="Search events..."
-        />
-      </div>
-
-      {/* Filters */}
-      <div className="p-4 space-y-4">
-        {/* City selection */}
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <MapPin size={18} className="text-gigabyte-primary" />
-            <span className="text-sm font-semibold text-gigabyte-text">Location</span>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {CITIES.map(city => (
-              <button
-                key={city}
-                onClick={() => handleCityChange(city)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  selectedCity === city
-                    ? 'bg-gigabyte-primary text-gigabyte-dark'
-                    : 'bg-gigabyte-surface text-gigabyte-text hover:bg-gigabyte-surface/80'
-                }`}
-              >
-                {city}
-              </button>
-            ))}
+    <div className="min-h-screen bg-ink-950 pb-24">
+      <header className="sticky top-0 z-40 bg-ink-950/80 backdrop-blur-xl border-b border-ink-900">
+        <div className="px-5 py-4 flex items-center justify-between">
+          <Logo size="md" />
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCityPicker(!showCityPicker)}
+              className="flex items-center gap-1.5 px-3.5 h-10 bg-ink-900 rounded-full border border-ink-800 hover:border-ink-700 transition-colors"
+            >
+              <span className="text-xs font-semibold text-ink-50">{selectedCity}</span>
+              <ChevronDown size={14} className="text-ink-400" strokeWidth={2.5} />
+            </button>
+            
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className="w-10 h-10 bg-ink-900 rounded-full border border-ink-800 hover:border-ink-700 flex items-center justify-center transition-colors"
+            >
+              <Search size={16} className="text-ink-50" strokeWidth={2.5} />
+            </button>
           </div>
         </div>
 
-        {/* Category filter toggle */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 text-gigabyte-primary hover:text-gigabyte-accent transition-colors"
-        >
-          <Filter size={18} />
-          <span className="text-sm font-medium">Categories</span>
-        </button>
+        {showCityPicker && (
+          <div className="px-5 pb-4 animate-fade-in">
+            <div className="flex gap-2">
+              {CITIES.map(city => (
+                <button
+                  key={city}
+                  onClick={() => {
+                    setSelectedCity(city);
+                    setShowCityPicker(false);
+                  }}
+                  className={`flex-1 h-10 rounded-full text-xs font-semibold transition-all ${
+                    selectedCity === city
+                      ? 'bg-ink-50 text-ink-950'
+                      : 'bg-ink-900 text-ink-300 border border-ink-800'
+                  }`}
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {/* Category filter */}
-        {showFilters && (
-          <div className="flex gap-2 flex-wrap">
+        {showSearch && (
+          <div className="px-5 pb-4 animate-fade-in">
+            <SearchBar value={searchQuery} onChange={setSearchQuery} />
+          </div>
+        )}
+
+        <div className="px-5 pb-4 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 w-max">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`h-9 px-4 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                selectedCategory === null
+                  ? 'bg-ink-50 text-ink-950'
+                  : 'bg-ink-900 text-ink-300 border border-ink-800 hover:border-ink-700'
+              }`}
+            >
+              All events
+            </button>
             {CATEGORIES.map(category => (
               <button
                 key={category}
-                onClick={() => handleCategoryChange(category)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                onClick={() => setSelectedCategory(selectedCategory === category ? null : category)}
+                className={`h-9 px-4 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                   selectedCategory === category
-                    ? 'bg-gigabyte-accent text-gigabyte-dark'
-                    : 'bg-gigabyte-surface text-gigabyte-text hover:bg-gigabyte-surface/80'
+                    ? 'bg-ink-50 text-ink-950'
+                    : 'bg-ink-900 text-ink-300 border border-ink-800 hover:border-ink-700'
                 }`}
               >
                 {category}
               </button>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      </header>
 
-      {/* Events grid */}
-      <div className="p-4">
+      <main className="px-5 py-6">
         {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="text-gigabyte-text-muted">Loading events...</div>
-          </div>
+          <LoadingState />
         ) : filteredEvents.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gigabyte-text-muted mb-4">No events found</p>
-            <Button
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory(null);
-                setSelectedCity('Johannesburg');
-              }}
-              variant="ghost"
-              size="sm"
-            >
-              Clear filters
-            </Button>
-          </div>
+          <EmptyState onClear={() => { setSearchQuery(''); setSelectedCategory(null); }} />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredEvents.map(event => (
-              <EventCard
-                key={event.id}
-                event={event}
-                onClick={() => {
-                  /* Navigate to event detail */
-                }}
-              />
-            ))}
-          </div>
+          <>
+            <section className="mb-8">
+              <p className="font-mono text-[10px] text-ink-500 uppercase tracking-wider mb-2">
+                {selectedCategory || 'Featured'} · {selectedCity}
+              </p>
+              <h1 className="font-display text-4xl md:text-6xl font-extrabold text-ink-50 tracking-tightest leading-[0.95] text-balance">
+                Tonight, tomorrow,<br />and every weekend.
+              </h1>
+              <p className="text-ink-400 text-base mt-4 max-w-md">
+                Discover {filteredEvents.length} events {selectedCategory ? `in ${selectedCategory.toLowerCase()}` : ''} across {selectedCity}.
+              </p>
+            </section>
+
+            {featuredEvent && (
+              <section className="mb-12 animate-fade-up">
+                <div className="flex items-baseline justify-between mb-4">
+                  <h2 className="font-display text-xl font-bold text-ink-50 tracking-tighter">
+                    Featured
+                  </h2>
+                  <span className="font-mono text-[10px] text-ink-500 uppercase tracking-wider">
+                    Pick of the week
+                  </span>
+                </div>
+                <EventCard event={featuredEvent} variant="featured" />
+              </section>
+            )}
+
+            {thisWeekend.length > 0 && (
+              <section className="mb-12">
+                <div className="flex items-baseline justify-between mb-6">
+                  <h2 className="font-display text-xl font-bold text-ink-50 tracking-tighter">
+                    This weekend
+                  </h2>
+                  <span className="font-mono text-[10px] text-ink-500 uppercase tracking-wider">
+                    {thisWeekend.length} events
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                  {thisWeekend.map(event => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {rest.length > 0 && (
+              <section className="mb-12">
+                <div className="flex items-baseline justify-between mb-6">
+                  <h2 className="font-display text-xl font-bold text-ink-50 tracking-tighter">
+                    More in {selectedCity}
+                  </h2>
+                  <span className="font-mono text-[10px] text-ink-500 uppercase tracking-wider">
+                    {rest.length} events
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                  {rest.map(event => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
-      </div>
+      </main>
     </div>
   );
 };
+
+const LoadingState = () => (
+  <div className="space-y-8 animate-pulse">
+    <div className="h-32 bg-ink-900 rounded-2xl" />
+    <div className="aspect-[4/5] md:aspect-[16/9] bg-ink-900 rounded-3xl" />
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+      {[1,2,3,4,5,6].map(i => (
+        <div key={i} className="aspect-[4/5] bg-ink-900 rounded-2xl" />
+      ))}
+    </div>
+  </div>
+);
+
+const EmptyState = ({ onClear }: { onClear: () => void }) => (
+  <div className="py-24 text-center">
+    <p className="font-mono text-[10px] text-ink-500 uppercase tracking-wider mb-3">
+      404 · No results
+    </p>
+    <h2 className="font-display text-3xl font-bold text-ink-50 tracking-tighter mb-3">
+      Nothing here yet
+    </h2>
+    <p className="text-ink-400 mb-6 max-w-xs mx-auto">
+      Try adjusting your filters or exploring another city.
+    </p>
+    <button
+      onClick={onClear}
+      className="inline-flex h-11 px-6 items-center justify-center bg-ink-50 text-ink-950 rounded-full font-semibold text-sm hover:bg-white transition-colors"
+    >
+      Clear filters
+    </button>
+  </div>
+);
