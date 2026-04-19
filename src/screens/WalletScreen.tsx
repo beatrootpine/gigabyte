@@ -1,17 +1,22 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { Shield, X, Check, QrCode as QRIcon, Copy, ArrowRightLeft, Tag, Info, History } from 'lucide-react';
+import { Shield, X, Check, QrCode as QRIcon, Copy, ArrowRightLeft, Tag, Info, History, Ticket as TicketIcon } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { TicketCard } from '../components/TicketCard';
+import { AuthModal } from '../components/AuthModal';
 import { MOCK_USER_TICKETS, DemoTicket, formatDateLong } from '../utils/mockData';
 import { formatCurrency } from '../utils/theme';
+import { useAuth } from '../contexts/AuthContext';
 
 type Modal = null | 'qr' | 'transfer' | 'resell' | 'protect' | 'history';
 
 export const WalletScreen = () => {
+  const { user } = useAuth();
   const [activeModal, setActiveModal] = useState<Modal>(null);
   const [selectedTicket, setSelectedTicket] = useState<DemoTicket | null>(null);
+  const [showAuth, setShowAuth] = useState<false | 'signin' | 'signup'>(false);
+  const [showDemoTickets, setShowDemoTickets] = useState(!user);
 
   const openModal = (modal: Modal, ticket?: DemoTicket) => {
     if (ticket) setSelectedTicket(ticket);
@@ -19,6 +24,9 @@ export const WalletScreen = () => {
   };
 
   const closeModal = () => { setActiveModal(null); setSelectedTicket(null); };
+
+  // Real users start with empty tickets. Demo preview lets anyone explore the UX.
+  const displayTickets = showDemoTickets ? MOCK_USER_TICKETS : [];
 
   return (
     <div className="min-h-screen bg-bg pb-28">
@@ -55,30 +63,79 @@ export const WalletScreen = () => {
           </div>
         </div>
 
-        {/* Demo preview banner */}
-        <div className="mb-6 bg-electric/5 border border-electric/20 rounded-2xl p-4 flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-electric/10 flex items-center justify-center flex-shrink-0">
-            <Shield size={14} className="text-electric" strokeWidth={2.5} />
+        {/* Demo preview / auth banner */}
+        {!user ? (
+          <div className="mb-6 bg-electric/5 border border-electric/20 rounded-2xl p-4 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-electric/10 flex items-center justify-center flex-shrink-0">
+              <Shield size={14} className="text-electric" strokeWidth={2.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-text">Demo preview</p>
+              <p className="text-xs text-text-muted mt-0.5 leading-relaxed mb-2">
+                Explore how tickets, transfers and resales work. Sign in to see your real tickets here.
+              </p>
+              <button
+                onClick={() => setShowAuth('signin')}
+                className="text-xs font-semibold text-electric hover:opacity-80 transition-opacity"
+              >
+                Sign in to Gigabyte →
+              </button>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm text-text">Demo preview</p>
-            <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
-              Explore how tickets, transfers and resales work. Sign in to see your real tickets here.
-            </p>
+        ) : showDemoTickets ? (
+          <div className="mb-6 bg-surface-2 border border-border rounded-2xl p-4 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-surface-3 flex items-center justify-center flex-shrink-0">
+              <Info size={14} className="text-text-muted" strokeWidth={2.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-text">Viewing demo tickets</p>
+              <p className="text-xs text-text-muted mt-0.5 leading-relaxed mb-2">
+                Buy an event to see your real tickets here.
+              </p>
+              <button
+                onClick={() => setShowDemoTickets(false)}
+                className="text-xs font-semibold text-text-muted hover:text-text transition-colors"
+              >
+                Hide demo tickets
+              </button>
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        <div className="space-y-5 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
-          {MOCK_USER_TICKETS.map(ticket => (
-            <TicketCard
-              key={ticket.id}
-              ticket={ticket}
-              onViewQR={(t) => openModal('qr', t)}
-              onTransfer={(t) => openModal('transfer', t)}
-              onResell={(t) => openModal('resell', t)}
-            />
-          ))}
-        </div>
+        {/* Tickets grid */}
+        {displayTickets.length > 0 ? (
+          <div className="space-y-5 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
+            {displayTickets.map(ticket => (
+              <TicketCard
+                key={ticket.id}
+                ticket={ticket}
+                onViewQR={(t) => openModal('qr', t)}
+                onTransfer={(t) => openModal('transfer', t)}
+                onResell={(t) => openModal('resell', t)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="py-16 text-center bg-surface border border-border rounded-3xl">
+            <div className="inline-flex w-14 h-14 rounded-2xl bg-surface-2 items-center justify-center mb-5">
+              <TicketIcon size={20} className="text-text-muted" strokeWidth={2} />
+            </div>
+            <h2 className="font-display text-xl font-bold text-text tracking-tighter mb-2">
+              No tickets yet
+            </h2>
+            <p className="text-sm text-text-muted max-w-xs mx-auto mb-5">
+              {user
+                ? 'Buy an event to see your tickets here with secure QR codes.'
+                : 'Sign in to see your real tickets, or preview the UX with demo tickets.'}
+            </p>
+            <button
+              onClick={() => user ? setShowDemoTickets(true) : setShowAuth('signin')}
+              className="inline-flex h-11 px-6 items-center justify-center bg-inverse text-inverse-text rounded-full font-semibold text-sm hover:opacity-90 transition-opacity"
+            >
+              {user ? 'View demo tickets' : 'Sign in'}
+            </button>
+          </div>
+        )}
       </main>
 
       {activeModal === 'qr' && selectedTicket && <QRModal ticket={selectedTicket} onClose={closeModal} />}
@@ -86,6 +143,7 @@ export const WalletScreen = () => {
       {activeModal === 'resell' && selectedTicket && <ResellModal ticket={selectedTicket} onClose={closeModal} />}
       {activeModal === 'protect' && <ProtectModal onClose={closeModal} />}
       {activeModal === 'history' && <HistoryModal onClose={closeModal} />}
+      {showAuth && <AuthModal initialMode={showAuth} onClose={() => setShowAuth(false)} />}
     </div>
   );
 };

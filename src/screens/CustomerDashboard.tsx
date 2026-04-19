@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { Sparkles, Building2, Shield, ArrowRight, User, Ticket, Bookmark } from 'lucide-react';
+import { Sparkles, Building2, Shield, ArrowRight, User as UserIcon, Ticket, Bookmark, LogOut, Mail } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { AuthModal } from '../components/AuthModal';
 import { SubscriptionScreen } from './SubscriptionScreen';
 import { BrandMarketplaceScreen } from './BrandMarketplaceScreen';
+import { useAuth } from '../contexts/AuthContext';
 
 export const CustomerDashboard = () => {
+  const { user, loading, signOut } = useAuth();
   const [showSubscription, setShowSubscription] = useState(false);
   const [showBrands, setShowBrands] = useState(false);
+  const [showAuth, setShowAuth] = useState<false | 'signin' | 'signup'>(false);
 
-  // No auth wired yet — show logged-out state.
-  // Once Supabase auth is live, swap this for: session?.user ? <AuthedDashboard/> : <LoggedOutDashboard/>
-  const isAuthed = false;
+  const fullName = (user?.user_metadata?.full_name as string) || '';
+  const firstName = fullName.split(' ')[0] || user?.email?.split('@')[0] || '';
 
   return (
     <div className="min-h-screen bg-bg pb-28">
@@ -23,71 +26,103 @@ export const CustomerDashboard = () => {
       </header>
 
       <main className="px-5 py-6">
-        {!isAuthed ? (
+        {loading ? (
+          <LoadingState />
+        ) : user ? (
+          <AuthedDashboard
+            firstName={firstName}
+            email={user.email || ''}
+            onOpenSubscription={() => setShowSubscription(true)}
+            onOpenBrands={() => setShowBrands(true)}
+            onSignOut={signOut}
+          />
+        ) : (
           <LoggedOutDashboard
+            onSignIn={() => setShowAuth('signin')}
+            onSignUp={() => setShowAuth('signup')}
             onOpenSubscription={() => setShowSubscription(true)}
             onOpenBrands={() => setShowBrands(true)}
           />
-        ) : null}
+        )}
       </main>
 
       {showSubscription && <SubscriptionScreen onClose={() => setShowSubscription(false)} />}
       {showBrands && <BrandMarketplaceScreen onClose={() => setShowBrands(false)} />}
+      {showAuth && <AuthModal initialMode={showAuth} onClose={() => setShowAuth(false)} />}
     </div>
   );
 };
 
-const LoggedOutDashboard = ({
+const LoadingState = () => (
+  <div className="space-y-4 animate-pulse">
+    <div className="h-20 bg-surface-2 rounded-2xl" />
+    <div className="h-40 bg-surface-2 rounded-2xl" />
+    <div className="h-32 bg-surface-2 rounded-2xl" />
+  </div>
+);
+
+// ============== AUTHED DASHBOARD ==============
+const AuthedDashboard = ({
+  firstName,
+  email,
   onOpenSubscription,
   onOpenBrands,
+  onSignOut,
 }: {
+  firstName: string;
+  email: string;
   onOpenSubscription: () => void;
   onOpenBrands: () => void;
+  onSignOut: () => void;
 }) => {
+  // These will be real queries once tickets exist. Start at 0 for new users.
+  const stats = [
+    { label: 'Tickets', value: '0', sub: 'In your wallet' },
+    { label: 'Spent', value: 'R0', sub: 'This year' },
+    { label: 'Upcoming', value: '0', sub: 'Events booked' },
+    { label: 'Saved', value: '0', sub: 'Bookmarked events' },
+  ];
+
   return (
     <>
       <section className="mb-8">
         <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
-          Your account
+          Your dashboard
         </p>
-        <h1 className="font-display text-3xl md:text-5xl font-extrabold text-text tracking-tightest leading-[0.95]">
-          Sign in to see your activity.
+        <h1 className="font-display text-3xl md:text-5xl font-extrabold text-text tracking-tightest leading-[0.95] capitalize">
+          Welcome{firstName ? `, ${firstName}` : ''}.
         </h1>
         <p className="text-text-muted text-sm md:text-base mt-3 max-w-md">
-          Track your tickets, see upcoming events, and unlock member-only perks.
+          Ready to find your next night out? Discover events and book in seconds.
         </p>
       </section>
 
-      {/* Sign in card */}
-      <section className="mb-8">
-        <div className="bg-surface border border-border rounded-3xl p-6">
-          <div className="flex items-center gap-4 mb-5">
-            <div className="w-12 h-12 rounded-full bg-surface-2 border border-border flex items-center justify-center flex-shrink-0">
-              <User size={18} className="text-text-muted" strokeWidth={2} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-display font-bold text-base text-text">Not signed in</p>
-              <p className="text-xs text-text-muted mt-0.5">Create an account or log in to continue</p>
-            </div>
+      {/* Stats */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        {stats.map((stat, i) => (
+          <div key={i} className="bg-surface border border-border rounded-2xl p-4 md:p-5">
+            <p className="font-mono text-[9px] text-text-subtle uppercase tracking-wider mb-2.5">
+              {stat.label}
+            </p>
+            <p className="font-display text-2xl md:text-3xl font-extrabold text-text tracking-tight leading-none mb-1.5">
+              {stat.value}
+            </p>
+            <p className="text-[11px] text-text-muted">{stat.sub}</p>
           </div>
-          <div className="flex gap-3">
-            <button
-              disabled
-              className="flex-1 h-11 bg-inverse text-inverse-text rounded-full font-semibold text-sm opacity-60 cursor-not-allowed"
-            >
-              Sign in
-            </button>
-            <button
-              disabled
-              className="flex-1 h-11 bg-surface-2 text-text rounded-full font-semibold text-sm border border-border opacity-60 cursor-not-allowed"
-            >
-              Create account
-            </button>
-          </div>
-          <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider text-center mt-3">
-            Auth coming soon
-          </p>
+        ))}
+      </section>
+
+      {/* Empty state encouragement */}
+      <section className="mb-8 bg-surface border border-border rounded-3xl p-6 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-surface-2 flex items-center justify-center mx-auto mb-4">
+          <Ticket size={22} className="text-text-muted" strokeWidth={2} />
         </div>
+        <h3 className="font-display text-lg font-bold text-text tracking-tighter mb-2">
+          No tickets yet
+        </h3>
+        <p className="text-sm text-text-muted mb-5 max-w-xs mx-auto">
+          Head to Discover to find something worth your Friday night.
+        </p>
       </section>
 
       {/* Pro upsell */}
@@ -114,7 +149,138 @@ const LoggedOutDashboard = ({
         </div>
       </section>
 
-      {/* What you'll get */}
+      {/* Account section */}
+      <section className="mb-8">
+        <h2 className="font-display text-lg font-bold text-text tracking-tighter mb-4">
+          Account
+        </h2>
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden divide-y divide-border">
+          <div className="p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-electric to-gold flex items-center justify-center flex-shrink-0">
+              <span className="font-display font-bold text-sm text-white">
+                {(firstName || email)[0]?.toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-text line-clamp-1">{firstName || 'Member'}</p>
+              <p className="text-xs text-text-muted line-clamp-1 flex items-center gap-1">
+                <Mail size={10} strokeWidth={2} />
+                {email}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onSignOut}
+            className="w-full flex items-center gap-3 p-4 hover:bg-surface-2 transition-colors text-left"
+          >
+            <div className="w-10 h-10 rounded-xl bg-surface-2 flex items-center justify-center flex-shrink-0">
+              <LogOut size={14} className="text-error" strokeWidth={2} />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-sm text-error">Sign out</p>
+              <p className="text-xs text-text-muted mt-0.5">You'll need to sign in again</p>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      {/* Brand marketplace teaser */}
+      <section>
+        <button
+          onClick={onOpenBrands}
+          className="w-full bg-surface border border-border rounded-2xl p-5 text-left hover:bg-surface-2 transition-colors flex items-center gap-4"
+        >
+          <div className="w-10 h-10 rounded-xl bg-surface-2 flex items-center justify-center flex-shrink-0">
+            <Building2 size={16} className="text-text" strokeWidth={2} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-display font-semibold text-sm text-text">Are you a brand?</p>
+            <p className="text-xs text-text-muted mt-0.5">Reach verified event-goers on Gigabyte.</p>
+          </div>
+          <ArrowRight size={16} className="text-text-subtle flex-shrink-0" strokeWidth={2} />
+        </button>
+      </section>
+    </>
+  );
+};
+
+// ============== LOGGED-OUT DASHBOARD ==============
+const LoggedOutDashboard = ({
+  onSignIn,
+  onSignUp,
+  onOpenSubscription,
+  onOpenBrands,
+}: {
+  onSignIn: () => void;
+  onSignUp: () => void;
+  onOpenSubscription: () => void;
+  onOpenBrands: () => void;
+}) => {
+  return (
+    <>
+      <section className="mb-8">
+        <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
+          Your account
+        </p>
+        <h1 className="font-display text-3xl md:text-5xl font-extrabold text-text tracking-tightest leading-[0.95]">
+          Sign in to see your activity.
+        </h1>
+        <p className="text-text-muted text-sm md:text-base mt-3 max-w-md">
+          Track your tickets, see upcoming events, and unlock member-only perks.
+        </p>
+      </section>
+
+      <section className="mb-8">
+        <div className="bg-surface border border-border rounded-3xl p-6">
+          <div className="flex items-center gap-4 mb-5">
+            <div className="w-12 h-12 rounded-full bg-surface-2 border border-border flex items-center justify-center flex-shrink-0">
+              <UserIcon size={18} className="text-text-muted" strokeWidth={2} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-display font-bold text-base text-text">Not signed in</p>
+              <p className="text-xs text-text-muted mt-0.5">Create an account or log in to continue</p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={onSignIn}
+              className="flex-1 h-11 bg-inverse text-inverse-text rounded-full font-semibold text-sm hover:opacity-90 transition-opacity"
+            >
+              Sign in
+            </button>
+            <button
+              onClick={onSignUp}
+              className="flex-1 h-11 bg-surface-2 text-text rounded-full font-semibold text-sm border border-border hover:bg-surface-3 transition-colors"
+            >
+              Create account
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="mb-8">
+        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-electric via-electric-deep to-gold p-6 md:p-7">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles size={14} className="text-white" strokeWidth={2.5} />
+            <p className="font-mono text-[10px] text-white/90 uppercase tracking-wider">
+              Gigabyte Pro
+            </p>
+          </div>
+          <h3 className="font-display text-2xl md:text-3xl font-bold text-white tracking-tighter mb-3 leading-tight max-w-sm">
+            Save on every event.
+          </h3>
+          <p className="text-white/80 text-sm mb-5 max-w-sm">
+            Exclusive discounts, early-bird access, and zero service fees from R49/month.
+          </p>
+          <button
+            onClick={onOpenSubscription}
+            className="h-11 px-5 bg-white text-ink-950 rounded-full font-semibold text-sm hover:opacity-90 transition-opacity inline-flex items-center gap-2"
+          >
+            See plans <ArrowRight size={14} strokeWidth={2.5} />
+          </button>
+        </div>
+      </section>
+
       <section className="mb-8">
         <h2 className="font-display text-lg font-bold text-text tracking-tighter mb-4">
           What you'll unlock
@@ -139,7 +305,6 @@ const LoggedOutDashboard = ({
         </div>
       </section>
 
-      {/* Brand marketplace teaser */}
       <section>
         <button
           onClick={onOpenBrands}

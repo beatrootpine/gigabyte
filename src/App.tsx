@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Compass, Bookmark, Ticket, LayoutDashboard } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { DiscoveryScreen } from './screens/DiscoveryScreen';
 import { WalletScreen } from './screens/WalletScreen';
 import { SavedScreen } from './screens/SavedScreen';
@@ -133,7 +134,9 @@ function AppInner() {
 function App() {
   return (
     <ThemeProvider>
-      <AppInner />
+      <AuthProvider>
+        <AppInner />
+      </AuthProvider>
     </ThemeProvider>
   );
 }
