@@ -1,32 +1,94 @@
-import { useState } from 'react';
-import { Compass, Bookmark, Ticket, LayoutDashboard, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Compass, Bookmark, Ticket, LayoutDashboard } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { DiscoveryScreen } from './screens/DiscoveryScreen';
 import { WalletScreen } from './screens/WalletScreen';
 import { SavedScreen } from './screens/SavedScreen';
 import { CustomerDashboard } from './screens/CustomerDashboard';
 import { AdminDashboard } from './screens/AdminDashboard';
+import { AdminGate } from './screens/AdminGate';
 
-type TabType = 'discover' | 'saved' | 'wallet' | 'dashboard' | 'admin';
+type TabType = 'discover' | 'saved' | 'wallet' | 'dashboard';
 
 const TABS: { id: TabType; label: string; icon: typeof Compass }[] = [
   { id: 'discover', label: 'Discover', icon: Compass },
   { id: 'saved', label: 'Saved', icon: Bookmark },
   { id: 'wallet', label: 'Wallet', icon: Ticket },
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'admin', label: 'Admin', icon: Shield },
 ];
+
+// Admin is gated: access via URL hash #admin + access code
+// This is NOT visible in the public bottom nav
+const useAdminRoute = () => {
+  const [isAdminRoute, setIsAdminRoute] = useState(
+    typeof window !== 'undefined' && window.location.hash === '#admin'
+  );
+
+  useEffect(() => {
+    const onHashChange = () => setIsAdminRoute(window.location.hash === '#admin');
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const exitAdminRoute = () => {
+    window.location.hash = '';
+    setIsAdminRoute(false);
+  };
+
+  return { isAdminRoute, exitAdminRoute };
+};
 
 function AppInner() {
   const [activeTab, setActiveTab] = useState<TabType>('discover');
+  const { isAdminRoute, exitAdminRoute } = useAdminRoute();
+  const [adminAuthed, setAdminAuthed] = useState(
+    typeof window !== 'undefined' && sessionStorage.getItem('gigabyte-admin-session') === 'authed'
+  );
 
+  // If URL hash is #admin, show admin flow (gated)
+  if (isAdminRoute) {
+    if (adminAuthed) {
+      return (
+        <div className="bg-bg min-h-screen text-text">
+          <div className="max-w-6xl mx-auto">
+            <AdminDashboard />
+          </div>
+          {/* Admin-only sign out bar */}
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+            <div className="flex items-center gap-3 px-4 h-11 bg-surface/95 backdrop-blur-xl border border-border rounded-full shadow-2xl shadow-black/30">
+              <span className="font-mono text-[10px] text-text-subtle uppercase tracking-wider">
+                Admin session
+              </span>
+              <button
+                onClick={() => {
+                  sessionStorage.removeItem('gigabyte-admin-session');
+                  setAdminAuthed(false);
+                  exitAdminRoute();
+                }}
+                className="text-xs font-semibold text-error hover:opacity-80 transition-opacity"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <AdminGate
+        onAuthed={() => setAdminAuthed(true)}
+        onExit={exitAdminRoute}
+      />
+    );
+  }
+
+  // Public app
   const renderContent = () => {
     switch (activeTab) {
       case 'discover': return <DiscoveryScreen />;
       case 'saved': return <SavedScreen />;
       case 'wallet': return <WalletScreen />;
       case 'dashboard': return <CustomerDashboard />;
-      case 'admin': return <AdminDashboard />;
       default: return <DiscoveryScreen />;
     }
   };
@@ -37,7 +99,6 @@ function AppInner() {
         {renderContent()}
       </div>
 
-      {/* Floating pill bottom nav */}
       <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-[calc(100%-2rem)] md:max-w-none md:w-auto md:px-0">
         <div className="flex items-center gap-1 p-1.5 bg-surface/95 backdrop-blur-xl border border-border rounded-full shadow-2xl shadow-black/30 mx-auto w-fit">
           {TABS.map(tab => {
