@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Compass, Heart, Wallet, User, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Compass, Heart, Wallet, User } from 'lucide-react';
 import { DiscoveryScreen } from './screens/DiscoveryScreen';
 import { WalletScreen } from './screens/WalletScreen';
 import { ProfileScreen } from './screens/ProfileScreen';

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Ticket } from 'lucide-react';
-import { ticketsService } from '../services/supabase';
 
 export const WalletScreen: React.FC = () => {
   const [tickets, setTickets] = useState<any[]>([]);
