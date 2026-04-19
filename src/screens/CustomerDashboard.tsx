@@ -5,6 +5,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { AuthModal } from '../components/AuthModal';
 import { SubscriptionScreen } from './SubscriptionScreen';
 import { BrandMarketplaceScreen } from './BrandMarketplaceScreen';
+import { OrganizerConsole } from './OrganizerConsole';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile } from '../hooks/useUserProfile';
 
@@ -13,6 +14,7 @@ export const CustomerDashboard = () => {
   const { profile } = useUserProfile();
   const [showSubscription, setShowSubscription] = useState(false);
   const [showBrands, setShowBrands] = useState(false);
+  const [showOrganizer, setShowOrganizer] = useState(false);
   const [showAuth, setShowAuth] = useState<false | 'signin' | 'signup'>(false);
 
   const fullName = profile?.full_name || (user?.user_metadata?.full_name as string) || '';
@@ -40,6 +42,7 @@ export const CustomerDashboard = () => {
             role={role}
             onOpenSubscription={() => setShowSubscription(true)}
             onOpenBrands={() => setShowBrands(true)}
+            onOpenOrganizer={() => setShowOrganizer(true)}
             onSignOut={signOut}
           />
         ) : (
@@ -54,6 +57,7 @@ export const CustomerDashboard = () => {
 
       {showSubscription && <SubscriptionScreen onClose={() => setShowSubscription(false)} />}
       {showBrands && <BrandMarketplaceScreen onClose={() => setShowBrands(false)} />}
+      {showOrganizer && <OrganizerConsole onClose={() => setShowOrganizer(false)} />}
       {showAuth && <AuthModal initialMode={showAuth} onClose={() => setShowAuth(false)} />}
     </div>
   );
@@ -75,6 +79,7 @@ const AuthedDashboard = ({
   role,
   onOpenSubscription,
   onOpenBrands,
+  onOpenOrganizer,
   onSignOut,
 }: {
   firstName: string;
@@ -83,6 +88,7 @@ const AuthedDashboard = ({
   role: 'user' | 'organizer' | 'admin';
   onOpenSubscription: () => void;
   onOpenBrands: () => void;
+  onOpenOrganizer: () => void;
   onSignOut: () => void;
 }) => {
   // These will be real queries once tickets exist. Start at 0 for new users.
@@ -221,7 +227,10 @@ const AuthedDashboard = ({
             <p className="text-sm text-text-muted mb-4 max-w-md">
               Create listings, track ticket sales, broadcast updates to attendees and view revenue reports.
             </p>
-            <button className="h-11 px-5 bg-success text-white rounded-full font-semibold text-sm hover:opacity-90 transition-opacity inline-flex items-center gap-2">
+            <button
+              onClick={onOpenOrganizer}
+              className="h-11 px-5 bg-success text-white rounded-full font-semibold text-sm hover:opacity-90 transition-opacity inline-flex items-center gap-2"
+            >
               Open organizer console <ArrowRight size={14} strokeWidth={2.5} />
             </button>
           </div>
