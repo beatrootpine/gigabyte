@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Calendar, Wallet, Heart, ChevronRight, Sparkles } from 'lucide-react';
+import { TrendingUp, Calendar, Wallet, Heart, ChevronRight, Sparkles, Building2 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { Event } from '../types';
 import { eventsService } from '../services/supabase';
 import { formatCurrency } from '../utils/theme';
+import { SubscriptionScreen } from './SubscriptionScreen';
+import { BrandMarketplaceScreen } from './BrandMarketplaceScreen';
 
 interface StatCard {
   label: string;
@@ -16,6 +18,8 @@ interface StatCard {
 export const CustomerDashboard = () => {
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showSubscription, setShowSubscription] = useState(false);
+  const [showBrands, setShowBrands] = useState(false);
 
   useEffect(() => {
     loadDashboard();
@@ -108,7 +112,7 @@ export const CustomerDashboard = () => {
                 </p>
               </div>
               <div className="flex-shrink-0">
-                <button className="h-12 px-6 bg-white text-ink-950 rounded-full font-semibold text-sm hover:bg-white/90 transition-colors">
+                <button onClick={() => setShowSubscription(true)} className="h-12 px-6 bg-white text-ink-950 rounded-full font-semibold text-sm hover:bg-white/90 transition-colors">
                   Upgrade R49/mo
                 </button>
               </div>
@@ -203,26 +207,46 @@ export const CustomerDashboard = () => {
             Quick actions
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {[
-              { icon: Wallet, label: 'Tickets', sub: 'View all tickets' },
-              { icon: Heart, label: 'Favorites', sub: '18 saved events' },
-              { icon: Calendar, label: 'Calendar', sub: 'Sync with Google' },
-              { icon: TrendingUp, label: 'Insights', sub: 'Yearly recap' },
-            ].map((action, i) => (
-              <button
-                key={i}
-                className="bg-surface border border-border rounded-2xl p-5 text-left hover:bg-surface-2 transition-colors"
-              >
-                <div className="w-10 h-10 rounded-xl bg-surface-2 flex items-center justify-center mb-3">
-                  <action.icon size={16} className="text-text" strokeWidth={2} />
-                </div>
-                <p className="font-display font-semibold text-sm text-text">{action.label}</p>
-                <p className="text-xs text-text-muted mt-1">{action.sub}</p>
-              </button>
-            ))}
+            <button
+              onClick={() => setShowSubscription(true)}
+              className="bg-surface border border-border rounded-2xl p-5 text-left hover:bg-surface-2 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl bg-electric/10 flex items-center justify-center mb-3">
+                <Sparkles size={16} className="text-electric" strokeWidth={2} />
+              </div>
+              <p className="font-display font-semibold text-sm text-text">Gigabyte Pro</p>
+              <p className="text-xs text-text-muted mt-1">Benefits & tiers</p>
+            </button>
+            <button className="bg-surface border border-border rounded-2xl p-5 text-left hover:bg-surface-2 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-surface-2 flex items-center justify-center mb-3">
+                <Wallet size={16} className="text-text" strokeWidth={2} />
+              </div>
+              <p className="font-display font-semibold text-sm text-text">My tickets</p>
+              <p className="text-xs text-text-muted mt-1">View all tickets</p>
+            </button>
+            <button className="bg-surface border border-border rounded-2xl p-5 text-left hover:bg-surface-2 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-surface-2 flex items-center justify-center mb-3">
+                <Heart size={16} className="text-text" strokeWidth={2} />
+              </div>
+              <p className="font-display font-semibold text-sm text-text">Favourites</p>
+              <p className="text-xs text-text-muted mt-1">18 saved events</p>
+            </button>
+            <button
+              onClick={() => setShowBrands(true)}
+              className="bg-surface border border-border rounded-2xl p-5 text-left hover:bg-surface-2 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl bg-surface-2 flex items-center justify-center mb-3">
+                <Building2 size={16} className="text-text" strokeWidth={2} />
+              </div>
+              <p className="font-display font-semibold text-sm text-text">Brands</p>
+              <p className="text-xs text-text-muted mt-1">Partner offers</p>
+            </button>
           </div>
         </section>
       </main>
+
+      {showSubscription && <SubscriptionScreen onClose={() => setShowSubscription(false)} />}
+      {showBrands && <BrandMarketplaceScreen onClose={() => setShowBrands(false)} />}
     </div>
   );
 };
