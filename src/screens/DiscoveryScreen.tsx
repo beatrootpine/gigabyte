@@ -4,6 +4,7 @@ import { Event } from '../types';
 import { EventCard } from '../components/EventCard';
 import { SearchBar } from '../components/SearchBar';
 import { Button } from '../components/Button';
+import { Logo } from '../components/Logo';
 import { CITIES, CATEGORIES } from '../utils/theme';
 import { eventsService } from '../services/supabase';
 
@@ -74,7 +75,7 @@ export const DiscoveryScreen: React.FC = () => {
     <div className="pb-20">
       {/* Header */}
       <div className="bg-gigabyte-dark p-4 sticky top-0 z-10 border-b border-gigabyte-surface">
-        <h1 className="font-display text-3xl font-bold text-gigabyte-accent mb-4">Gigabyte</h1>
+        <Logo size="md" className="mb-4" />
         <SearchBar
           value={searchQuery}
           onChange={handleSearch}
