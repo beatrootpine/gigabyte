@@ -1,35 +1,40 @@
 import { Bookmark } from 'lucide-react';
+import { Logo } from '../components/Logo';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export const SavedScreen = () => {
   return (
-    <div className="min-h-screen bg-ink-950 pb-24">
-      <header className="sticky top-0 z-40 bg-ink-950/80 backdrop-blur-xl border-b border-ink-900">
-        <div className="px-5 py-5">
-          <p className="font-mono text-[10px] text-ink-500 uppercase tracking-wider mb-1">
-            Bookmarked events
-          </p>
-          <h1 className="font-display text-3xl font-extrabold text-ink-50 tracking-tightest">
-            Saved
-          </h1>
+    <div className="min-h-screen bg-bg pb-28">
+      <header className="sticky top-0 z-40 bg-bg/80 backdrop-blur-xl border-b border-border">
+        <div className="px-5 py-4 flex items-center justify-between">
+          <Logo size="md" />
+          <ThemeToggle />
         </div>
       </header>
 
-      <main className="px-5 py-8">
+      <div className="px-5 py-6">
+        <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
+          Bookmarked events
+        </p>
+        <h1 className="font-display text-4xl md:text-5xl font-extrabold text-text tracking-tightest leading-[0.95] mb-8">
+          Saved
+        </h1>
+
         <div className="py-24 text-center">
-          <div className="inline-flex w-16 h-16 rounded-2xl bg-ink-900 border border-ink-800 items-center justify-center mb-6">
-            <Bookmark size={24} className="text-ink-500" strokeWidth={2} />
+          <div className="inline-flex w-16 h-16 rounded-2xl bg-surface border border-border items-center justify-center mb-6">
+            <Bookmark size={24} className="text-text-muted" strokeWidth={2} />
           </div>
-          <p className="font-mono text-[10px] text-ink-500 uppercase tracking-wider mb-3">
+          <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-3">
             Empty
           </p>
-          <h2 className="font-display text-2xl font-bold text-ink-50 tracking-tighter mb-3">
+          <h2 className="font-display text-2xl font-bold text-text tracking-tighter mb-3">
             Nothing saved yet
           </h2>
-          <p className="text-ink-400 max-w-xs mx-auto">
+          <p className="text-text-muted max-w-xs mx-auto">
             Tap the bookmark icon on any event to save it here for later.
           </p>
         </div>
-      </main>
+      </div>
     </div>
   );
 };

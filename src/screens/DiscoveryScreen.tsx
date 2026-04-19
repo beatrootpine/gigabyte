@@ -4,6 +4,7 @@ import { Event } from '../types';
 import { EventCard } from '../components/EventCard';
 import { SearchBar } from '../components/SearchBar';
 import { Logo } from '../components/Logo';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { CITIES, CATEGORIES } from '../utils/theme';
 import { eventsService } from '../services/supabase';
 
@@ -51,26 +52,28 @@ export const DiscoveryScreen = () => {
   const rest = filteredEvents.slice(5);
 
   return (
-    <div className="min-h-screen bg-ink-950 pb-24">
-      <header className="sticky top-0 z-40 bg-ink-950/80 backdrop-blur-xl border-b border-ink-900">
-        <div className="px-5 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-bg pb-28">
+      <header className="sticky top-0 z-40 bg-bg/80 backdrop-blur-xl border-b border-border">
+        <div className="px-5 py-4 flex items-center justify-between gap-3">
           <Logo size="md" />
           
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCityPicker(!showCityPicker)}
-              className="flex items-center gap-1.5 px-3.5 h-10 bg-ink-900 rounded-full border border-ink-800 hover:border-ink-700 transition-colors"
+              className="flex items-center gap-1.5 px-3.5 h-10 bg-surface-2 rounded-full border border-border hover:border-border-strong transition-colors"
             >
-              <span className="text-xs font-semibold text-ink-50">{selectedCity}</span>
-              <ChevronDown size={14} className="text-ink-400" strokeWidth={2.5} />
+              <span className="text-xs font-semibold text-text">{selectedCity}</span>
+              <ChevronDown size={14} className="text-text-muted" strokeWidth={2.5} />
             </button>
             
             <button
               onClick={() => setShowSearch(!showSearch)}
-              className="w-10 h-10 bg-ink-900 rounded-full border border-ink-800 hover:border-ink-700 flex items-center justify-center transition-colors"
+              className="w-10 h-10 bg-surface-2 rounded-full border border-border hover:border-border-strong flex items-center justify-center transition-colors"
             >
-              <Search size={16} className="text-ink-50" strokeWidth={2.5} />
+              <Search size={16} className="text-text" strokeWidth={2.5} />
             </button>
+
+            <ThemeToggle />
           </div>
         </div>
 
@@ -86,8 +89,8 @@ export const DiscoveryScreen = () => {
                   }}
                   className={`flex-1 h-10 rounded-full text-xs font-semibold transition-all ${
                     selectedCity === city
-                      ? 'bg-ink-50 text-ink-950'
-                      : 'bg-ink-900 text-ink-300 border border-ink-800'
+                      ? 'bg-inverse text-inverse-text'
+                      : 'bg-surface-2 text-text-muted border border-border'
                   }`}
                 >
                   {city}
@@ -109,8 +112,8 @@ export const DiscoveryScreen = () => {
               onClick={() => setSelectedCategory(null)}
               className={`h-9 px-4 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                 selectedCategory === null
-                  ? 'bg-ink-50 text-ink-950'
-                  : 'bg-ink-900 text-ink-300 border border-ink-800 hover:border-ink-700'
+                  ? 'bg-inverse text-inverse-text'
+                  : 'bg-surface-2 text-text-muted border border-border hover:border-border-strong'
               }`}
             >
               All events
@@ -121,8 +124,8 @@ export const DiscoveryScreen = () => {
                 onClick={() => setSelectedCategory(selectedCategory === category ? null : category)}
                 className={`h-9 px-4 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                   selectedCategory === category
-                    ? 'bg-ink-50 text-ink-950'
-                    : 'bg-ink-900 text-ink-300 border border-ink-800 hover:border-ink-700'
+                    ? 'bg-inverse text-inverse-text'
+                    : 'bg-surface-2 text-text-muted border border-border hover:border-border-strong'
                 }`}
               >
                 {category}
@@ -140,13 +143,13 @@ export const DiscoveryScreen = () => {
         ) : (
           <>
             <section className="mb-8">
-              <p className="font-mono text-[10px] text-ink-500 uppercase tracking-wider mb-2">
+              <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
                 {selectedCategory || 'Featured'} · {selectedCity}
               </p>
-              <h1 className="font-display text-4xl md:text-6xl font-extrabold text-ink-50 tracking-tightest leading-[0.95] text-balance">
+              <h1 className="font-display text-4xl md:text-6xl font-extrabold text-text tracking-tightest leading-[0.95] text-balance">
                 Tonight, tomorrow,<br />and every weekend.
               </h1>
-              <p className="text-ink-400 text-base mt-4 max-w-md">
+              <p className="text-text-muted text-base mt-4 max-w-md">
                 Discover {filteredEvents.length} events {selectedCategory ? `in ${selectedCategory.toLowerCase()}` : ''} across {selectedCity}.
               </p>
             </section>
@@ -154,10 +157,10 @@ export const DiscoveryScreen = () => {
             {featuredEvent && (
               <section className="mb-12 animate-fade-up">
                 <div className="flex items-baseline justify-between mb-4">
-                  <h2 className="font-display text-xl font-bold text-ink-50 tracking-tighter">
+                  <h2 className="font-display text-xl font-bold text-text tracking-tighter">
                     Featured
                   </h2>
-                  <span className="font-mono text-[10px] text-ink-500 uppercase tracking-wider">
+                  <span className="font-mono text-[10px] text-text-subtle uppercase tracking-wider">
                     Pick of the week
                   </span>
                 </div>
@@ -168,10 +171,10 @@ export const DiscoveryScreen = () => {
             {thisWeekend.length > 0 && (
               <section className="mb-12">
                 <div className="flex items-baseline justify-between mb-6">
-                  <h2 className="font-display text-xl font-bold text-ink-50 tracking-tighter">
+                  <h2 className="font-display text-xl font-bold text-text tracking-tighter">
                     This weekend
                   </h2>
-                  <span className="font-mono text-[10px] text-ink-500 uppercase tracking-wider">
+                  <span className="font-mono text-[10px] text-text-subtle uppercase tracking-wider">
                     {thisWeekend.length} events
                   </span>
                 </div>
@@ -186,10 +189,10 @@ export const DiscoveryScreen = () => {
             {rest.length > 0 && (
               <section className="mb-12">
                 <div className="flex items-baseline justify-between mb-6">
-                  <h2 className="font-display text-xl font-bold text-ink-50 tracking-tighter">
+                  <h2 className="font-display text-xl font-bold text-text tracking-tighter">
                     More in {selectedCity}
                   </h2>
-                  <span className="font-mono text-[10px] text-ink-500 uppercase tracking-wider">
+                  <span className="font-mono text-[10px] text-text-subtle uppercase tracking-wider">
                     {rest.length} events
                   </span>
                 </div>
@@ -209,11 +212,11 @@ export const DiscoveryScreen = () => {
 
 const LoadingState = () => (
   <div className="space-y-8 animate-pulse">
-    <div className="h-32 bg-ink-900 rounded-2xl" />
-    <div className="aspect-[4/5] md:aspect-[16/9] bg-ink-900 rounded-3xl" />
+    <div className="h-32 bg-surface-2 rounded-2xl" />
+    <div className="aspect-[4/5] md:aspect-[16/9] bg-surface-2 rounded-3xl" />
     <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
       {[1,2,3,4,5,6].map(i => (
-        <div key={i} className="aspect-[4/5] bg-ink-900 rounded-2xl" />
+        <div key={i} className="aspect-[4/5] bg-surface-2 rounded-2xl" />
       ))}
     </div>
   </div>
@@ -221,18 +224,18 @@ const LoadingState = () => (
 
 const EmptyState = ({ onClear }: { onClear: () => void }) => (
   <div className="py-24 text-center">
-    <p className="font-mono text-[10px] text-ink-500 uppercase tracking-wider mb-3">
+    <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-3">
       404 · No results
     </p>
-    <h2 className="font-display text-3xl font-bold text-ink-50 tracking-tighter mb-3">
+    <h2 className="font-display text-3xl font-bold text-text tracking-tighter mb-3">
       Nothing here yet
     </h2>
-    <p className="text-ink-400 mb-6 max-w-xs mx-auto">
+    <p className="text-text-muted mb-6 max-w-xs mx-auto">
       Try adjusting your filters or exploring another city.
     </p>
     <button
       onClick={onClear}
-      className="inline-flex h-11 px-6 items-center justify-center bg-ink-50 text-ink-950 rounded-full font-semibold text-sm hover:bg-white transition-colors"
+      className="inline-flex h-11 px-6 items-center justify-center bg-inverse text-inverse-text rounded-full font-semibold text-sm hover:opacity-90 transition-opacity"
     >
       Clear filters
     </button>

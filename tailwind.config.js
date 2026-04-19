@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -7,6 +8,33 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Theme-aware semantic colors (auto-adapts via CSS variables)
+        bg: 'rgb(var(--bg) / <alpha-value>)',
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        'surface-2': 'rgb(var(--surface-2) / <alpha-value>)',
+        'surface-3': 'rgb(var(--surface-3) / <alpha-value>)',
+        border: 'rgb(var(--border) / <alpha-value>)',
+        'border-strong': 'rgb(var(--border-strong) / <alpha-value>)',
+        text: 'rgb(var(--text) / <alpha-value>)',
+        'text-muted': 'rgb(var(--text-muted) / <alpha-value>)',
+        'text-subtle': 'rgb(var(--text-subtle) / <alpha-value>)',
+        inverse: 'rgb(var(--inverse) / <alpha-value>)',
+        'inverse-text': 'rgb(var(--inverse-text) / <alpha-value>)',
+        
+        // Brand accents (same in both themes)
+        electric: {
+          DEFAULT: '#5B5BFF',
+          soft: '#8080FF',
+          deep: '#3D3DE6',
+        },
+        gold: {
+          DEFAULT: '#FFB800',
+          soft: '#FFC94D',
+        },
+        success: '#22C55E',
+        error: '#EF4444',
+        
+        // Raw ink palette for explicit colors
         ink: {
           50: '#FAFAFA',
           100: '#F5F5F5',
@@ -21,23 +49,16 @@ export default {
           950: '#0B0B0B',
           black: '#000000',
         },
-        electric: '#5B5BFF',
-        'electric-soft': '#8080FF',
-        gold: '#FFB800',
-        'gold-soft': '#FFC94D',
-        success: '#22C55E',
-        error: '#EF4444',
       },
       fontFamily: {
-        display: ['"Bricolage Grotesque"', 'sans-serif'],
+        display: ['Poppins', 'sans-serif'],
         sans: ['Inter', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
-        serif: ['"Instrument Serif"', 'serif'],
       },
       letterSpacing: {
-        tightest: '-0.05em',
-        tighter: '-0.035em',
-        'super-tight': '-0.025em',
+        tightest: '-0.04em',
+        tighter: '-0.025em',
+        'super-tight': '-0.018em',
       },
       spacing: {
         '18': '4.5rem',
@@ -45,8 +66,8 @@ export default {
         '30': '7.5rem',
       },
       animation: {
-        'fade-up': 'fadeUp 0.6s ease-out forwards',
-        'fade-in': 'fadeIn 0.4s ease-out forwards',
+        'fade-up': 'fadeUp 0.5s ease-out forwards',
+        'fade-in': 'fadeIn 0.3s ease-out forwards',
         'scale-in': 'scaleIn 0.3s ease-out forwards',
       },
       keyframes: {
