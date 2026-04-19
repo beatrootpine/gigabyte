@@ -1,5 +1,4 @@
 import { X, ArrowRight, Target, BarChart3, Zap, Users } from 'lucide-react';
-import { formatCurrency } from '../utils/theme';
 
 interface BrandMarketplaceScreenProps {
   onClose: () => void;
