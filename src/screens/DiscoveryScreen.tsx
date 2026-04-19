@@ -53,9 +53,6 @@ export const DiscoveryScreen = () => {
     return true;
   });
 
-  const homecomingSpotlight = filteredEvents
-    .filter(e => e.category === 'Music' || e.category === 'Nightlife')
-    .slice(0, 3);
   const featuredEvent = filteredEvents[0];
   const thisWeekend = filteredEvents.slice(1, 5);
   const rest = filteredEvents.slice(5);
@@ -182,30 +179,6 @@ export const DiscoveryScreen = () => {
                 ))}
               </div>
             </section>
-
-            {/* Homecoming */}
-            {homecomingSpotlight.length > 0 && (
-              <section className="mb-10 animate-fade-up">
-                <div className="flex items-baseline justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles size={13} className="text-gold" strokeWidth={2.5} />
-                    <h2 className="font-display text-lg font-bold text-text tracking-tighter">
-                      Homecoming spotlight
-                    </h2>
-                  </div>
-                  <span className="font-mono text-[10px] text-text-subtle uppercase tracking-wider">
-                    Curated
-                  </span>
-                </div>
-                <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-5 px-5">
-                  {homecomingSpotlight.map(event => (
-                    <div key={event.id} className="flex-shrink-0 w-64 md:w-72">
-                      <EventCard event={event} onClick={() => setSelectedEvent(event)} />
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
 
             {/* Featured */}
             {featuredEvent && (
