@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Shield, Check, Star, ArrowRight } from 'lucide-react';
 import { MOCK_RESALE_LISTINGS, ResaleListing, formatDateShort } from '../utils/mockData';
 import { formatCurrency } from '../utils/theme';
+import { SmartImage } from '../components/SmartImage';
 
 interface ResaleMarketplaceProps {
   cityFilter?: string;
@@ -67,9 +68,10 @@ const ResaleCard = ({ listing, onClick }: { listing: ResaleListing; onClick: () 
       className="group cursor-pointer animate-fade-up"
     >
       <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-surface-2 mb-4">
-        <img
+        <SmartImage
           src={listing.event_image}
           alt={listing.event_title}
+          seed={listing.id}
           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
@@ -149,7 +151,7 @@ const ResaleBuyModal = ({ listing, onClose }: { listing: ResaleListing; onClose:
 
             <div className="bg-surface-2 rounded-2xl p-4 space-y-3 mb-5">
               <div className="flex items-start gap-3">
-                <img src={listing.event_image} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+                <SmartImage src={listing.event_image} alt={listing.event_title} seed={listing.id} className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-text line-clamp-1">{listing.ticket_type}</p>
                   <p className="text-xs text-text-muted line-clamp-1">

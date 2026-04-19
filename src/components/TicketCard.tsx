@@ -1,6 +1,7 @@
 import { Shield, ArrowRightLeft, Tag, QrCode, MoreHorizontal } from 'lucide-react';
 import { DemoTicket, formatDateShort } from '../utils/mockData';
 import { formatCurrency } from '../utils/theme';
+import { SmartImage } from './SmartImage';
 
 interface TicketCardProps {
   ticket: DemoTicket;
@@ -16,9 +17,10 @@ export const TicketCard = ({ ticket, onViewQR, onTransfer, onResell }: TicketCar
     <div className="bg-surface border border-border rounded-3xl overflow-hidden animate-fade-up">
       {/* Top: event image with overlay */}
       <div className="relative aspect-[5/2] overflow-hidden bg-surface-2">
-        <img
+        <SmartImage
           src={ticket.event_image}
           alt={ticket.event_title}
+          seed={ticket.id}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />

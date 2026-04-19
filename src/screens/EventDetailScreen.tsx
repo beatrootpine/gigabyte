@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, MapPin, Calendar, Clock, Users, Share2, Bookmark, Shield, Check, CreditCard } from 'lucide-react';
 import { Event } from '../types';
 import { formatCurrency } from '../utils/theme';
+import { SmartImage } from '../components/SmartImage';
 
 interface EventDetailScreenProps {
   event: Event;
@@ -57,10 +58,12 @@ export const EventDetailScreen = ({ event, onClose }: EventDetailScreenProps) =>
     <div className="fixed inset-0 z-50 bg-bg overflow-y-auto animate-fade-in">
       {/* Hero image */}
       <div className="relative h-[55vh] md:h-[60vh] overflow-hidden bg-surface-2">
-        <img
+        <SmartImage
           src={event.image_url}
           alt={event.title}
+          seed={event.id}
           className="absolute inset-0 w-full h-full object-cover"
+          loading="eager"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/40 to-black/20" />
         

@@ -5,6 +5,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { Event } from '../types';
 import { eventsService } from '../services/supabase';
 import { formatCurrency } from '../utils/theme';
+import { SmartImage } from '../components/SmartImage';
 
 export const AdminDashboard = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -208,7 +209,7 @@ export const AdminDashboard = () => {
                   return (
                     <div key={event.id} className="p-5 flex items-center gap-4 hover:bg-surface-2 transition-colors">
                       <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-2 flex-shrink-0">
-                        <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
+                        <SmartImage src={event.image_url} alt={event.title} seed={event.id} className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-display font-semibold text-sm text-text line-clamp-1">{event.title}</p>

@@ -1,6 +1,7 @@
 import { Bookmark, BookmarkCheck } from 'lucide-react';
 import { Event } from '../types';
 import { formatCurrency } from '../utils/theme';
+import { SmartImage } from './SmartImage';
 
 interface EventCardProps {
   event: Event;
@@ -33,9 +34,10 @@ export const EventCard = ({
         onClick={onClick}
         className="relative w-full aspect-[4/5] md:aspect-[16/9] rounded-3xl overflow-hidden cursor-pointer group bg-surface-2"
       >
-        <img
+        <SmartImage
           src={event.image_url}
           alt={event.title}
+          seed={event.id}
           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
@@ -91,7 +93,7 @@ export const EventCard = ({
         className="flex gap-4 p-3 rounded-2xl hover:bg-surface-2 transition-colors cursor-pointer group"
       >
         <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-surface-2 flex-shrink-0">
-          <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
+          <SmartImage src={event.image_url} alt={event.title} seed={event.id} className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-mono text-[10px] text-text-muted uppercase tracking-wider mb-1">
@@ -114,9 +116,10 @@ export const EventCard = ({
   return (
     <div onClick={onClick} className="group cursor-pointer animate-fade-up">
       <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-surface-2 mb-4">
-        <img
+        <SmartImage
           src={event.image_url}
           alt={event.title}
+          seed={event.id}
           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
