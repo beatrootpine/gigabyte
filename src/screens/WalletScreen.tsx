@@ -30,28 +30,41 @@ export const WalletScreen = () => {
       </header>
 
       <main className="px-5 py-6">
-        <div className="mb-8">
+        <div className="mb-6">
           <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
-            {MOCK_USER_TICKETS.length} active · Protected by Gigabyte
+            Tickets & passes
           </p>
-          <h1 className="font-display text-4xl md:text-5xl font-extrabold text-text tracking-tightest leading-[0.95]">
+          <h1 className="font-display text-3xl md:text-5xl font-extrabold text-text tracking-tightest leading-[0.95]">
             Your wallet.
           </h1>
-          <div className="flex items-center gap-5 mt-4">
+          <div className="flex items-center gap-5 mt-3 flex-wrap">
             <button
               onClick={() => openModal('protect')}
-              className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-text transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text transition-colors"
             >
-              <Shield size={14} className="text-electric" strokeWidth={2.5} />
+              <Shield size={13} className="text-electric" strokeWidth={2.5} />
               <span>How Gigabyte Protect works</span>
             </button>
             <button
               onClick={() => openModal('history')}
-              className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-text transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text transition-colors"
             >
-              <History size={14} strokeWidth={2} />
+              <History size={13} strokeWidth={2} />
               <span>Transfer history</span>
             </button>
+          </div>
+        </div>
+
+        {/* Demo preview banner */}
+        <div className="mb-6 bg-electric/5 border border-electric/20 rounded-2xl p-4 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-electric/10 flex items-center justify-center flex-shrink-0">
+            <Shield size={14} className="text-electric" strokeWidth={2.5} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm text-text">Demo preview</p>
+            <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
+              Explore how tickets, transfers and resales work. Sign in to see your real tickets here.
+            </p>
           </div>
         </div>
 

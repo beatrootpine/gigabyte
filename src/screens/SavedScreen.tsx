@@ -16,7 +16,7 @@ export const SavedScreen = () => {
         <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
           Bookmarked events
         </p>
-        <h1 className="font-display text-4xl md:text-5xl font-extrabold text-text tracking-tightest leading-[0.95] mb-8">
+        <h1 className="font-display text-3xl md:text-5xl font-extrabold text-text tracking-tightest leading-[0.95] mb-8">
           Saved
         </h1>
 
