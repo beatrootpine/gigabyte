@@ -1,7 +1,16 @@
 import { useState } from 'react';
-import { X, Mail, Lock, User as UserIcon, Loader2, Check } from 'lucide-react';
+import { X, Mail, Lock, User as UserIcon, Loader2, Check, Sparkles, Shield, Crown, Users as UsersIcon, ArrowRight } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
+
+const DEMO_ACCOUNTS = [
+  { email: 'demo@gigabyte.co.za', name: 'Demo User', role: 'Free user', sub: 'Standard experience', icon: UserIcon, color: 'bg-surface-2' },
+  { email: 'pro@gigabyte.co.za', name: 'Thabo Mokoena', role: 'Pro subscriber', sub: 'Discounts & early access', icon: Sparkles, color: 'bg-electric/10' },
+  { email: 'premium@gigabyte.co.za', name: 'Lerato Khumalo', role: 'Premium', sub: 'Members-only events', icon: Crown, color: 'bg-gold/10' },
+  { email: 'organizer@gigabyte.co.za', name: 'Sipho Dlamini', role: 'Organizer', sub: 'Manages events', icon: UsersIcon, color: 'bg-success/10' },
+  { email: 'admin@gigabyte.co.za', name: 'Mo Moshoane', role: 'Platform admin', sub: 'Full admin console', icon: Shield, color: 'bg-error/10' },
+];
+const DEMO_PASSWORD = 'Gigabyte2026!';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -10,13 +19,30 @@ interface AuthModalProps {
 
 export const AuthModal = ({ onClose, initialMode = 'signin' }: AuthModalProps) => {
   const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
+  const [mode, setMode] = useState<'signin' | 'signup' | 'demo'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [demoSigningIn, setDemoSigningIn] = useState<string | null>(null);
+
+  const handleDemoSignIn = async (demoEmail: string) => {
+    setError(null);
+    setDemoSigningIn(demoEmail);
+    const { error } = await signIn(demoEmail, DEMO_PASSWORD);
+    if (error) {
+      setError(`Couldn't sign in as ${demoEmail}. Make sure demo-users.sql has been run in Supabase. (${error})`);
+      setDemoSigningIn(null);
+    } else {
+      // If signing in as admin, redirect to admin console
+      if (demoEmail === 'admin@gigabyte.co.za') {
+        window.location.hash = '#admin';
+      }
+      onClose();
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,14 +96,100 @@ export const AuthModal = ({ onClose, initialMode = 'signin' }: AuthModalProps) =
             <Logo size="md" />
           </div>
 
-          <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
-            {mode === 'signin' ? 'Welcome back' : 'Create account'}
-          </p>
-          <h2 className="font-display text-2xl md:text-3xl font-bold text-text tracking-tighter leading-tight mb-6">
-            {mode === 'signin' ? 'Sign in to Gigabyte' : 'Join Gigabyte.'}
-          </h2>
+          {/* Mode tabs */}
+          <div className="flex gap-1 p-1 bg-surface-2 border border-border rounded-full mb-6">
+            <button
+              onClick={() => { setMode('signin'); setError(null); }}
+              className={`flex-1 h-9 rounded-full text-xs font-semibold transition-all ${
+                mode === 'signin' ? 'bg-inverse text-inverse-text' : 'text-text-muted'
+              }`}
+            >
+              Sign in
+            </button>
+            <button
+              onClick={() => { setMode('signup'); setError(null); }}
+              className={`flex-1 h-9 rounded-full text-xs font-semibold transition-all ${
+                mode === 'signup' ? 'bg-inverse text-inverse-text' : 'text-text-muted'
+              }`}
+            >
+              Create account
+            </button>
+            <button
+              onClick={() => { setMode('demo'); setError(null); }}
+              className={`flex-1 h-9 rounded-full text-xs font-semibold transition-all inline-flex items-center justify-center gap-1 ${
+                mode === 'demo' ? 'bg-inverse text-inverse-text' : 'text-text-muted'
+              }`}
+            >
+              <Sparkles size={10} strokeWidth={2.5} />
+              Demo
+            </button>
+          </div>
 
-          {successMessage ? (
+          {mode === 'demo' ? (
+            // ============ DEMO ACCOUNTS ============
+            <>
+              <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
+                One-click demo access
+              </p>
+              <h2 className="font-display text-2xl md:text-3xl font-bold text-text tracking-tighter leading-tight mb-2">
+                Try Gigabyte as any user.
+              </h2>
+              <p className="text-sm text-text-muted mb-6">
+                Instant sign-in — no password. Each account shows a different experience.
+              </p>
+
+              {error && (
+                <div className="bg-error/10 border border-error/20 rounded-xl p-3 mb-4">
+                  <p className="text-xs text-error">{error}</p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {DEMO_ACCOUNTS.map((account) => {
+                  const Icon = account.icon;
+                  const isLoading = demoSigningIn === account.email;
+                  return (
+                    <button
+                      key={account.email}
+                      onClick={() => handleDemoSignIn(account.email)}
+                      disabled={!!demoSigningIn}
+                      className="w-full flex items-center gap-3 p-4 bg-surface-2 hover:bg-surface-3 border border-border rounded-2xl transition-colors text-left disabled:opacity-50 disabled:cursor-wait"
+                    >
+                      <div className={`w-10 h-10 rounded-xl ${account.color} flex items-center justify-center flex-shrink-0`}>
+                        {isLoading ? (
+                          <Loader2 size={16} className="text-text animate-spin" strokeWidth={2} />
+                        ) : (
+                          <Icon size={16} className="text-text" strokeWidth={2} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2">
+                          <p className="font-display font-bold text-sm text-text line-clamp-1">{account.name}</p>
+                          <span className="font-mono text-[9px] text-text-subtle uppercase tracking-wider flex-shrink-0">
+                            {account.role}
+                          </span>
+                        </div>
+                        <p className="text-xs text-text-muted line-clamp-1 mt-0.5">
+                          {account.sub} · <span className="font-mono">{account.email.split('@')[0]}</span>
+                        </p>
+                      </div>
+                      <ArrowRight size={14} className="text-text-subtle flex-shrink-0" strokeWidth={2.5} />
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5 p-4 bg-surface-2 rounded-2xl border border-border">
+                <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-1">
+                  Shared password
+                </p>
+                <p className="font-mono text-sm font-semibold text-text">Gigabyte2026!</p>
+                <p className="text-[11px] text-text-muted mt-2 leading-relaxed">
+                  Same password for every demo account. First-time setup: run <span className="font-mono text-text">demo-users.sql</span> in your Supabase SQL Editor.
+                </p>
+              </div>
+            </>
+          ) : successMessage ? (
             <div className="bg-success/10 border border-success/20 rounded-2xl p-5 flex items-start gap-3 mb-4">
               <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center flex-shrink-0">
                 <Check size={16} className="text-success" strokeWidth={3} />
@@ -88,85 +200,81 @@ export const AuthModal = ({ onClose, initialMode = 'signin' }: AuthModalProps) =
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === 'signup' && (
+            // ============ SIGN IN / SIGN UP ============
+            <>
+              <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
+                {mode === 'signin' ? 'Welcome back' : 'Create account'}
+              </p>
+              <h2 className="font-display text-2xl md:text-3xl font-bold text-text tracking-tighter leading-tight mb-6">
+                {mode === 'signin' ? 'Sign in to Gigabyte' : 'Join Gigabyte.'}
+              </h2>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {mode === 'signup' && (
+                  <div>
+                    <label className="flex items-center gap-2 font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
+                      <UserIcon size={10} strokeWidth={2.5} />
+                      Full name
+                    </label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="What should we call you?"
+                      className="w-full h-12 px-4 bg-surface-2 text-text placeholder-text-subtle rounded-xl border border-border focus:border-border-strong focus:outline-none text-sm"
+                      autoFocus
+                    />
+                  </div>
+                )}
+
                 <div>
                   <label className="flex items-center gap-2 font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
-                    <UserIcon size={10} strokeWidth={2.5} />
-                    Full name
+                    <Mail size={10} strokeWidth={2.5} />
+                    Email
                   </label>
                   <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="What should we call you?"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                    autoFocus={mode === 'signin'}
                     className="w-full h-12 px-4 bg-surface-2 text-text placeholder-text-subtle rounded-xl border border-border focus:border-border-strong focus:outline-none text-sm"
-                    autoFocus
                   />
                 </div>
-              )}
 
-              <div>
-                <label className="flex items-center gap-2 font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
-                  <Mail size={10} strokeWidth={2.5} />
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  required
-                  autoFocus={mode === 'signin'}
-                  className="w-full h-12 px-4 bg-surface-2 text-text placeholder-text-subtle rounded-xl border border-border focus:border-border-strong focus:outline-none text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="flex items-center gap-2 font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
-                  <Lock size={10} strokeWidth={2.5} />
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={mode === 'signup' ? 'At least 6 characters' : 'Your password'}
-                  required
-                  minLength={6}
-                  className="w-full h-12 px-4 bg-surface-2 text-text placeholder-text-subtle rounded-xl border border-border focus:border-border-strong focus:outline-none text-sm"
-                />
-              </div>
-
-              {error && (
-                <div className="bg-error/10 border border-error/20 rounded-xl p-3">
-                  <p className="text-xs text-error">{error}</p>
+                <div>
+                  <label className="flex items-center gap-2 font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
+                    <Lock size={10} strokeWidth={2.5} />
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={mode === 'signup' ? 'At least 6 characters' : 'Your password'}
+                    required
+                    minLength={6}
+                    className="w-full h-12 px-4 bg-surface-2 text-text placeholder-text-subtle rounded-xl border border-border focus:border-border-strong focus:outline-none text-sm"
+                  />
                 </div>
-              )}
 
-              <button
-                type="submit"
-                disabled={loading || !email || !password || (mode === 'signup' && !fullName)}
-                className="w-full h-12 bg-inverse text-inverse-text rounded-full font-semibold text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
-              >
-                {loading && <Loader2 size={14} className="animate-spin" />}
-                {mode === 'signin' ? 'Sign in' : 'Create account'}
-              </button>
-            </form>
-          )}
+                {error && (
+                  <div className="bg-error/10 border border-error/20 rounded-xl p-3">
+                    <p className="text-xs text-error">{error}</p>
+                  </div>
+                )}
 
-          {!successMessage && (
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); }}
-                className="text-sm text-text-muted hover:text-text transition-colors"
-              >
-                {mode === 'signin'
-                  ? <>New here? <span className="text-text font-semibold">Create an account</span></>
-                  : <>Already have an account? <span className="text-text font-semibold">Sign in</span></>
-                }
-              </button>
-            </div>
+                <button
+                  type="submit"
+                  disabled={loading || !email || !password || (mode === 'signup' && !fullName)}
+                  className="w-full h-12 bg-inverse text-inverse-text rounded-full font-semibold text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
+                >
+                  {loading && <Loader2 size={14} className="animate-spin" />}
+                  {mode === 'signin' ? 'Sign in' : 'Create account'}
+                </button>
+              </form>
+            </>
           )}
 
           <p className="mt-6 text-center font-mono text-[10px] text-text-subtle uppercase tracking-wider">

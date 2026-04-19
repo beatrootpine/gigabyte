@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Compass, Bookmark, Ticket, LayoutDashboard } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useUserProfile } from './hooks/useUserProfile';
 import { DiscoveryScreen } from './screens/DiscoveryScreen';
 import { WalletScreen } from './screens/WalletScreen';
 import { SavedScreen } from './screens/SavedScreen';
@@ -42,13 +43,18 @@ const useAdminRoute = () => {
 function AppInner() {
   const [activeTab, setActiveTab] = useState<TabType>('discover');
   const { isAdminRoute, exitAdminRoute } = useAdminRoute();
-  const [adminAuthed, setAdminAuthed] = useState(
+  const { signOut } = useAuth();
+  const { profile } = useUserProfile();
+  const [adminCodeAuthed, setAdminCodeAuthed] = useState(
     typeof window !== 'undefined' && sessionStorage.getItem('gigabyte-admin-session') === 'authed'
   );
 
+  // Admin access: signed-in admin OR access-code authed
+  const hasAdminAccess = profile?.role === 'admin' || adminCodeAuthed;
+
   // If URL hash is #admin, show admin flow (gated)
   if (isAdminRoute) {
-    if (adminAuthed) {
+    if (hasAdminAccess) {
       return (
         <div className="bg-bg min-h-screen text-text">
           <div className="max-w-6xl mx-auto">
@@ -58,12 +64,13 @@ function AppInner() {
           <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
             <div className="flex items-center gap-3 px-4 h-11 bg-surface/95 backdrop-blur-xl border border-border rounded-full shadow-2xl shadow-black/30">
               <span className="font-mono text-[10px] text-text-subtle uppercase tracking-wider">
-                Admin session
+                {profile?.role === 'admin' ? `Admin · ${profile.full_name || profile.email}` : 'Admin session'}
               </span>
               <button
-                onClick={() => {
+                onClick={async () => {
                   sessionStorage.removeItem('gigabyte-admin-session');
-                  setAdminAuthed(false);
+                  setAdminCodeAuthed(false);
+                  if (profile?.role === 'admin') await signOut();
                   exitAdminRoute();
                 }}
                 className="text-xs font-semibold text-error hover:opacity-80 transition-opacity"
@@ -77,7 +84,7 @@ function AppInner() {
     }
     return (
       <AdminGate
-        onAuthed={() => setAdminAuthed(true)}
+        onAuthed={() => setAdminCodeAuthed(true)}
         onExit={exitAdminRoute}
       />
     );
