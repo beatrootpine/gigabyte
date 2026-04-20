@@ -19,6 +19,11 @@ export interface DemoTicket {
   purchased_at: string;
   transferable: boolean;
   resellable: boolean;
+  // Optional — set when the ticket was bought on a payment plan
+  payment_mode?: 'full' | 'plan';
+  payment_status?: 'paid' | 'pending' | 'partially_paid';
+  plan_installments_paid?: number;
+  plan_installments_total?: number;
 }
 
 export const MOCK_USER_TICKETS: DemoTicket[] = [

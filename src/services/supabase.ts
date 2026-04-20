@@ -107,7 +107,7 @@ export const ticketsService = {
   getMyTickets: async (userId: string) => {
     const { data, error } = await supabase
       .from('tickets')
-      .select('*, events(*)')
+      .select('*, events(*), payment_plans(*, installments(*))')
       .eq('user_id', userId)
       .eq('status', 'active')
       .order('created_at', { ascending: false });
@@ -142,6 +142,84 @@ export const ticketsService = {
       })
       .select('*, events(*)')
       .single();
+    if (error) throw error;
+    return data;
+  },
+};
+
+// Payments services — demo gateway + payment plans
+export const paymentsService = {
+  // Create a 3-installment payment plan for a ticket
+  createPlan: async (params: {
+    ticketId: string;
+    userId: string;
+    totalAmount: number;
+    installmentsTotal?: number;
+    frequency?: 'monthly' | 'biweekly';
+  }) => {
+    const installmentsTotal = params.installmentsTotal ?? 3;
+    const frequency = params.frequency ?? 'monthly';
+    const installmentAmount = Math.ceil(params.totalAmount / installmentsTotal);
+
+    // Create the plan — first installment is considered paid at creation
+    const { data: plan, error: planError } = await supabase
+      .from('payment_plans')
+      .insert({
+        ticket_id: params.ticketId,
+        user_id: params.userId,
+        total_amount: params.totalAmount,
+        installments_total: installmentsTotal,
+        installments_paid: 1, // first one paid today
+        installment_amount: installmentAmount,
+        frequency,
+        status: 'active',
+      })
+      .select()
+      .single();
+    if (planError) throw planError;
+
+    // Build installment schedule
+    const now = new Date();
+    const gapDays = frequency === 'biweekly' ? 14 : 30;
+    const installmentRows = [];
+    for (let i = 1; i <= installmentsTotal; i++) {
+      const dueDate = new Date(now);
+      dueDate.setDate(dueDate.getDate() + gapDays * (i - 1));
+      installmentRows.push({
+        plan_id: plan.id,
+        installment_number: i,
+        amount: installmentAmount,
+        due_date: dueDate.toISOString(),
+        status: i === 1 ? 'paid' : 'pending',
+        paid_at: i === 1 ? now.toISOString() : null,
+      });
+    }
+
+    const { data: installments, error: instError } = await supabase
+      .from('installments')
+      .insert(installmentRows)
+      .select();
+    if (instError) throw instError;
+
+    return { plan, installments };
+  },
+
+  // Get a ticket's plan with all installments
+  getPlan: async (ticketId: string) => {
+    const { data, error } = await supabase
+      .from('payment_plans')
+      .select('*, installments(*)')
+      .eq('ticket_id', ticketId)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  // Pay one installment (via RPC so it atomically updates plan + ticket)
+  payInstallment: async (installmentId: string) => {
+    const { data, error } = await supabase.rpc('pay_installment', {
+      installment_id: installmentId,
+    });
     if (error) throw error;
     return data;
   },

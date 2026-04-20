@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { X, MapPin, Calendar, Clock, Users, Share2, Bookmark, Shield, Check, CreditCard, Loader2 } from 'lucide-react';
+import { X, MapPin, Calendar, Clock, Users, Share2, Bookmark, Shield, Check, CreditCard } from 'lucide-react';
 import { Event } from '../types';
 import { formatCurrency } from '../utils/theme';
 import { SmartImage } from '../components/SmartImage';
 import { AuthModal } from '../components/AuthModal';
+import { PaymentModal } from '../components/PaymentModal';
 import { useAuth } from '../contexts/AuthContext';
-import { ticketsService } from '../services/supabase';
+import { ticketsService, paymentsService } from '../services/supabase';
 
 interface EventDetailScreenProps {
   event: Event;
@@ -25,9 +26,8 @@ export const EventDetailScreen = ({ event, onClose }: EventDetailScreenProps) =>
   const { user } = useAuth();
   const [selectedTier, setSelectedTier] = useState<number>(0);
   const [paymentMode, setPaymentMode] = useState<'full' | 'plan'>('full');
-  const [showCheckout, setShowCheckout] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
-  const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState<string | null>(null);
 
   // Generate ticket tiers based on event pricing
@@ -309,38 +309,16 @@ export const EventDetailScreen = ({ event, onClose }: EventDetailScreenProps) =>
             </p>
           </div>
           <button
-            onClick={async () => {
+            onClick={() => {
               setBuyError(null);
               if (!user) {
                 setShowAuth(true);
                 return;
               }
-              setBuying(true);
-              try {
-                await ticketsService.buyTicket({
-                  userId: user.id,
-                  eventId: event.id,
-                  ticketType: tier.name,
-                  price: tier.price,
-                  serviceFee,
-                  total,
-                  paymentMode,
-                });
-                setShowCheckout(true);
-              } catch (err: any) {
-                setBuyError(
-                  err?.message?.includes('does not exist') || err?.message?.includes('relation')
-                    ? 'Tickets table not set up yet. Run tickets-setup.sql in Supabase.'
-                    : err?.message || 'Something went wrong. Please try again.'
-                );
-              } finally {
-                setBuying(false);
-              }
+              setShowPayment(true);
             }}
-            disabled={buying}
-            className="h-12 px-8 bg-inverse text-inverse-text rounded-full font-semibold text-sm hover:opacity-90 disabled:opacity-60 transition-opacity whitespace-nowrap inline-flex items-center gap-2"
+            className="h-12 px-8 bg-inverse text-inverse-text rounded-full font-semibold text-sm hover:opacity-90 transition-opacity whitespace-nowrap inline-flex items-center gap-2"
           >
-            {buying && <Loader2 size={14} className="animate-spin" />}
             {!user ? 'Sign in to buy' : paymentMode === 'full' ? 'Buy now' : 'Start plan'}
           </button>
         </div>
@@ -356,30 +334,48 @@ export const EventDetailScreen = ({ event, onClose }: EventDetailScreenProps) =>
       {/* Auth modal for unauthed buyers */}
       {showAuth && <AuthModal initialMode="signin" onClose={() => setShowAuth(false)} />}
 
-      {/* Checkout success */}
-      {showCheckout && (
-        <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-md flex items-center justify-center p-5 animate-fade-in">
-          <div className="bg-surface border border-border rounded-3xl p-8 max-w-md w-full text-center">
-            <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-5">
-              <Check size={28} className="text-success" strokeWidth={3} />
-            </div>
-            <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
-              Payment successful
-            </p>
-            <h2 className="font-display text-2xl font-bold text-text tracking-tighter mb-3">
-              You're going!
-            </h2>
-            <p className="text-sm text-text-muted mb-6">
-              Your ticket for <span className="font-semibold text-text">{event.title}</span> is in your wallet.
-            </p>
-            <button
-              onClick={() => { setShowCheckout(false); onClose(); }}
-              className="w-full h-12 bg-inverse text-inverse-text rounded-full font-semibold text-sm hover:opacity-90 transition-opacity"
-            >
-              View ticket
-            </button>
-          </div>
-        </div>
+      {/* Payment modal — demo gateway */}
+      {showPayment && user && (
+        <PaymentModal
+          mode={paymentMode}
+          eventTitle={event.title}
+          ticketType={tier.name}
+          total={total}
+          installmentAmount={installmentPerMonth}
+          installmentsTotal={3}
+          frequency="monthly"
+          onClose={() => { setShowPayment(false); onClose(); }}
+          onSuccess={async () => {
+            try {
+              // 1. Create the ticket
+              const ticket = await ticketsService.buyTicket({
+                userId: user.id,
+                eventId: event.id,
+                ticketType: tier.name,
+                price: tier.price,
+                serviceFee,
+                total,
+                paymentMode,
+              });
+
+              // 2. If payment plan, set up the installment schedule
+              if (paymentMode === 'plan' && ticket?.id) {
+                await paymentsService.createPlan({
+                  ticketId: ticket.id,
+                  userId: user.id,
+                  totalAmount: total,
+                  installmentsTotal: 3,
+                  frequency: 'monthly',
+                });
+              }
+            } catch (err: any) {
+              if (err?.message?.includes('does not exist') || err?.message?.includes('relation')) {
+                throw new Error('Payments tables not set up. Run payments-setup.sql in Supabase.');
+              }
+              throw err;
+            }
+          }}
+        />
       )}
     </div>
   );

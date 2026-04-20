@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { Shield, X, Check, QrCode as QRIcon, Copy, ArrowRightLeft, Tag, Info, History, Ticket as TicketIcon, Loader2 } from 'lucide-react';
+import { Shield, X, Check, QrCode as QRIcon, Copy, ArrowRightLeft, Tag, Info, History, Ticket as TicketIcon, Loader2, CreditCard } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { TicketCard } from '../components/TicketCard';
 import { AuthModal } from '../components/AuthModal';
+import { PaymentPlanDetail } from './PaymentPlanDetail';
 import { MOCK_USER_TICKETS, DemoTicket, formatDateLong } from '../utils/mockData';
 import { formatCurrency } from '../utils/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { ticketsService } from '../services/supabase';
 
-type Modal = null | 'qr' | 'transfer' | 'resell' | 'protect' | 'history';
+type Modal = null | 'qr' | 'transfer' | 'resell' | 'protect' | 'history' | 'plan';
 
-// Map a Supabase ticket row (with joined event) to the DemoTicket shape the UI expects
+// Map a Supabase ticket row (with joined event + plan) to the UI shape
 const toDemoTicket = (row: any): DemoTicket => {
   // Normalize status to the DemoTicket union
   const rawStatus = row.status as string;
@@ -20,6 +21,7 @@ const toDemoTicket = (row: any): DemoTicket => {
     rawStatus === 'resold' ? 'listed' :
     rawStatus === 'cancelled' ? 'used' :
     (rawStatus as DemoTicket['status']);
+  const plan = Array.isArray(row.payment_plans) ? row.payment_plans[0] : row.payment_plans;
   return {
     id: row.id,
     event_id: row.event_id,
@@ -37,8 +39,12 @@ const toDemoTicket = (row: any): DemoTicket => {
     original_price: Number(row.price),
     status,
     purchased_at: row.created_at,
-    transferable: status === 'active',
-    resellable: status === 'active',
+    transferable: status === 'active' && row.payment_status === 'paid',
+    resellable: status === 'active' && row.payment_status === 'paid',
+    payment_mode: row.payment_mode,
+    payment_status: row.payment_status,
+    plan_installments_paid: plan?.installments_paid,
+    plan_installments_total: plan?.installments_total,
   };
 };
 
@@ -51,6 +57,16 @@ export const WalletScreen = () => {
   const [myTickets, setMyTickets] = useState<DemoTicket[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const reloadTickets = async () => {
+    if (!user) return;
+    try {
+      const rows = await ticketsService.getMyTickets(user.id);
+      setMyTickets((rows || []).map(toDemoTicket));
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
 
   // Load the user's real tickets whenever auth changes
   useEffect(() => {
@@ -71,7 +87,7 @@ export const WalletScreen = () => {
       .catch(err => {
         if (cancelled) return;
         if (err?.message?.includes('does not exist') || err?.message?.includes('relation')) {
-          setLoadError('Tickets table not set up yet. Run tickets-setup.sql in Supabase.');
+          setLoadError('Tickets table not set up yet. Run payments-setup.sql in Supabase.');
         } else {
           setLoadError(err?.message || 'Could not load your tickets.');
         }
@@ -184,15 +200,55 @@ export const WalletScreen = () => {
           </div>
         ) : displayTickets.length > 0 ? (
           <div className="space-y-5 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
-            {displayTickets.map(ticket => (
-              <TicketCard
-                key={ticket.id}
-                ticket={ticket}
-                onViewQR={(t) => openModal('qr', t)}
-                onTransfer={(t) => openModal('transfer', t)}
-                onResell={(t) => openModal('resell', t)}
-              />
-            ))}
+            {displayTickets.map(ticket => {
+              const hasPlan = ticket.payment_mode === 'plan' && ticket.payment_status !== 'paid';
+              const planDone = ticket.payment_mode === 'plan' && ticket.payment_status === 'paid';
+              const progress = (ticket.plan_installments_paid && ticket.plan_installments_total)
+                ? Math.round((ticket.plan_installments_paid / ticket.plan_installments_total) * 100)
+                : 0;
+              return (
+                <div key={ticket.id} className="space-y-2">
+                  <TicketCard
+                    ticket={ticket}
+                    onViewQR={(t) => openModal('qr', t as DemoTicket)}
+                    onTransfer={(t) => openModal('transfer', t as DemoTicket)}
+                    onResell={(t) => openModal('resell', t as DemoTicket)}
+                  />
+                  {hasPlan && (
+                    <button
+                      onClick={() => openModal('plan', ticket)}
+                      className="w-full bg-electric/5 border border-electric/20 rounded-2xl p-4 flex items-center gap-3 hover:bg-electric/10 transition-colors text-left"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-electric/10 flex items-center justify-center flex-shrink-0">
+                        <CreditCard size={14} className="text-electric" strokeWidth={2.5} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="font-semibold text-sm text-text">Payment plan</p>
+                          <p className="font-mono text-[10px] text-electric font-semibold">
+                            {ticket.plan_installments_paid}/{ticket.plan_installments_total} paid
+                          </p>
+                        </div>
+                        <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden mt-2">
+                          <div className="h-full bg-electric rounded-full transition-all" style={{ width: `${progress}%` }} />
+                        </div>
+                      </div>
+                    </button>
+                  )}
+                  {planDone && ticket.plan_installments_total && (
+                    <button
+                      onClick={() => openModal('plan', ticket)}
+                      className="w-full bg-success/5 border border-success/20 rounded-2xl p-3 flex items-center gap-3 hover:bg-success/10 transition-colors text-left"
+                    >
+                      <Check size={14} className="text-success flex-shrink-0" strokeWidth={2.5} />
+                      <p className="text-xs text-text flex-1">
+                        <span className="font-semibold">Plan complete</span> · View payment history
+                      </p>
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="py-16 text-center bg-surface border border-border rounded-3xl">
@@ -222,6 +278,14 @@ export const WalletScreen = () => {
       {activeModal === 'resell' && selectedTicket && <ResellModal ticket={selectedTicket} onClose={closeModal} />}
       {activeModal === 'protect' && <ProtectModal onClose={closeModal} />}
       {activeModal === 'history' && <HistoryModal onClose={closeModal} />}
+      {activeModal === 'plan' && selectedTicket && (
+        <PaymentPlanDetail
+          ticketId={selectedTicket.id}
+          eventTitle={selectedTicket.event_title}
+          onClose={closeModal}
+          onPaymentMade={reloadTickets}
+        />
+      )}
       {showAuth && <AuthModal initialMode={showAuth} onClose={() => setShowAuth(false)} />}
     </div>
   );
