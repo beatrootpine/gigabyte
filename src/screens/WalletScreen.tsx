@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { Shield, X, Check, QrCode as QRIcon, Copy, ArrowRightLeft, Tag, Info, History, Ticket as TicketIcon } from 'lucide-react';
+import { Shield, X, Check, QrCode as QRIcon, Copy, ArrowRightLeft, Tag, Info, History, Ticket as TicketIcon, Loader2 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { TicketCard } from '../components/TicketCard';
@@ -8,15 +8,77 @@ import { AuthModal } from '../components/AuthModal';
 import { MOCK_USER_TICKETS, DemoTicket, formatDateLong } from '../utils/mockData';
 import { formatCurrency } from '../utils/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { ticketsService } from '../services/supabase';
 
 type Modal = null | 'qr' | 'transfer' | 'resell' | 'protect' | 'history';
+
+// Map a Supabase ticket row (with joined event) to the DemoTicket shape the UI expects
+const toDemoTicket = (row: any): DemoTicket => {
+  // Normalize status to the DemoTicket union
+  const rawStatus = row.status as string;
+  const status: DemoTicket['status'] =
+    rawStatus === 'resold' ? 'listed' :
+    rawStatus === 'cancelled' ? 'used' :
+    (rawStatus as DemoTicket['status']);
+  return {
+    id: row.id,
+    event_id: row.event_id,
+    event_title: row.events?.title || 'Event',
+    event_image: row.events?.image_url || '',
+    venue: row.events?.venue || '',
+    city: row.events?.city || '',
+    date: row.events?.date || new Date().toISOString(),
+    time: row.events?.time || '',
+    category: row.events?.category || '',
+    ticket_type: row.ticket_type,
+    seat: row.seat,
+    qr_hash: row.qr_hash,
+    price: Number(row.total),
+    original_price: Number(row.price),
+    status,
+    purchased_at: row.created_at,
+    transferable: status === 'active',
+    resellable: status === 'active',
+  };
+};
 
 export const WalletScreen = () => {
   const { user } = useAuth();
   const [activeModal, setActiveModal] = useState<Modal>(null);
   const [selectedTicket, setSelectedTicket] = useState<DemoTicket | null>(null);
   const [showAuth, setShowAuth] = useState<false | 'signin' | 'signup'>(false);
-  const [showDemoTickets, setShowDemoTickets] = useState(!user);
+  const [showDemoTickets, setShowDemoTickets] = useState(false);
+  const [myTickets, setMyTickets] = useState<DemoTicket[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Load the user's real tickets whenever auth changes
+  useEffect(() => {
+    if (!user) {
+      setMyTickets([]);
+      setShowDemoTickets(true); // unauthed: show demo by default
+      return;
+    }
+    setShowDemoTickets(false);
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    ticketsService.getMyTickets(user.id)
+      .then(rows => {
+        if (cancelled) return;
+        setMyTickets((rows || []).map(toDemoTicket));
+      })
+      .catch(err => {
+        if (cancelled) return;
+        if (err?.message?.includes('does not exist') || err?.message?.includes('relation')) {
+          setLoadError('Tickets table not set up yet. Run tickets-setup.sql in Supabase.');
+        } else {
+          setLoadError(err?.message || 'Could not load your tickets.');
+        }
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [user]);
 
   const openModal = (modal: Modal, ticket?: DemoTicket) => {
     if (ticket) setSelectedTicket(ticket);
@@ -25,8 +87,11 @@ export const WalletScreen = () => {
 
   const closeModal = () => { setActiveModal(null); setSelectedTicket(null); };
 
-  // Real users start with empty tickets. Demo preview lets anyone explore the UX.
-  const displayTickets = showDemoTickets ? MOCK_USER_TICKETS : [];
+  // If authed: show real tickets, plus demo tickets if user toggled them on
+  // If unauthed: show demo tickets as a preview
+  const displayTickets = user
+    ? (showDemoTickets ? [...myTickets, ...MOCK_USER_TICKETS] : myTickets)
+    : (showDemoTickets ? MOCK_USER_TICKETS : []);
 
   return (
     <div className="min-h-screen bg-bg pb-28">
@@ -63,8 +128,18 @@ export const WalletScreen = () => {
           </div>
         </div>
 
-        {/* Demo preview / auth banner */}
-        {!user ? (
+        {/* State banners */}
+        {loadError ? (
+          <div className="mb-6 bg-error/5 border border-error/20 rounded-2xl p-4 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center flex-shrink-0">
+              <Info size={14} className="text-error" strokeWidth={2.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-text">Couldn't load your tickets</p>
+              <p className="text-xs text-text-muted mt-0.5 leading-relaxed">{loadError}</p>
+            </div>
+          </div>
+        ) : !user ? (
           <div className="mb-6 bg-electric/5 border border-electric/20 rounded-2xl p-4 flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-electric/10 flex items-center justify-center flex-shrink-0">
               <Shield size={14} className="text-electric" strokeWidth={2.5} />
@@ -82,15 +157,15 @@ export const WalletScreen = () => {
               </button>
             </div>
           </div>
-        ) : showDemoTickets ? (
+        ) : showDemoTickets && myTickets.length > 0 ? (
           <div className="mb-6 bg-surface-2 border border-border rounded-2xl p-4 flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-surface-3 flex items-center justify-center flex-shrink-0">
               <Info size={14} className="text-text-muted" strokeWidth={2.5} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm text-text">Viewing demo tickets</p>
+              <p className="font-semibold text-sm text-text">Including demo tickets</p>
               <p className="text-xs text-text-muted mt-0.5 leading-relaxed mb-2">
-                Buy an event to see your real tickets here.
+                Demo tickets are mixed in below so you can try Transfer and Resell flows.
               </p>
               <button
                 onClick={() => setShowDemoTickets(false)}
@@ -102,8 +177,12 @@ export const WalletScreen = () => {
           </div>
         ) : null}
 
-        {/* Tickets grid */}
-        {displayTickets.length > 0 ? (
+        {loading ? (
+          <div className="py-16 text-center">
+            <Loader2 size={24} className="text-text-muted animate-spin mx-auto mb-3" strokeWidth={2} />
+            <p className="text-sm text-text-muted">Loading your tickets…</p>
+          </div>
+        ) : displayTickets.length > 0 ? (
           <div className="space-y-5 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
             {displayTickets.map(ticket => (
               <TicketCard

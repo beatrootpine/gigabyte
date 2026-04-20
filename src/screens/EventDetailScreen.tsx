@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { X, MapPin, Calendar, Clock, Users, Share2, Bookmark, Shield, Check, CreditCard } from 'lucide-react';
+import { X, MapPin, Calendar, Clock, Users, Share2, Bookmark, Shield, Check, CreditCard, Loader2 } from 'lucide-react';
 import { Event } from '../types';
 import { formatCurrency } from '../utils/theme';
 import { SmartImage } from '../components/SmartImage';
+import { AuthModal } from '../components/AuthModal';
+import { useAuth } from '../contexts/AuthContext';
+import { ticketsService } from '../services/supabase';
 
 interface EventDetailScreenProps {
   event: Event;
@@ -19,9 +22,13 @@ interface TicketTier {
 }
 
 export const EventDetailScreen = ({ event, onClose }: EventDetailScreenProps) => {
+  const { user } = useAuth();
   const [selectedTier, setSelectedTier] = useState<number>(0);
   const [paymentMode, setPaymentMode] = useState<'full' | 'plan'>('full');
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState<string | null>(null);
 
   // Generate ticket tiers based on event pricing
   const tiers: TicketTier[] = [
@@ -302,15 +309,54 @@ export const EventDetailScreen = ({ event, onClose }: EventDetailScreenProps) =>
             </p>
           </div>
           <button
-            onClick={() => setShowCheckout(true)}
-            className="h-12 px-8 bg-inverse text-inverse-text rounded-full font-semibold text-sm hover:opacity-90 transition-opacity whitespace-nowrap"
+            onClick={async () => {
+              setBuyError(null);
+              if (!user) {
+                setShowAuth(true);
+                return;
+              }
+              setBuying(true);
+              try {
+                await ticketsService.buyTicket({
+                  userId: user.id,
+                  eventId: event.id,
+                  ticketType: tier.name,
+                  price: tier.price,
+                  serviceFee,
+                  total,
+                  paymentMode,
+                });
+                setShowCheckout(true);
+              } catch (err: any) {
+                setBuyError(
+                  err?.message?.includes('does not exist') || err?.message?.includes('relation')
+                    ? 'Tickets table not set up yet. Run tickets-setup.sql in Supabase.'
+                    : err?.message || 'Something went wrong. Please try again.'
+                );
+              } finally {
+                setBuying(false);
+              }
+            }}
+            disabled={buying}
+            className="h-12 px-8 bg-inverse text-inverse-text rounded-full font-semibold text-sm hover:opacity-90 disabled:opacity-60 transition-opacity whitespace-nowrap inline-flex items-center gap-2"
           >
-            {paymentMode === 'full' ? 'Buy now' : 'Start plan'}
+            {buying && <Loader2 size={14} className="animate-spin" />}
+            {!user ? 'Sign in to buy' : paymentMode === 'full' ? 'Buy now' : 'Start plan'}
           </button>
         </div>
+        {buyError && (
+          <div className="max-w-3xl mx-auto px-5 pb-3">
+            <div className="bg-error/10 border border-error/20 rounded-xl p-3">
+              <p className="text-xs text-error">{buyError}</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Checkout success (demo) */}
+      {/* Auth modal for unauthed buyers */}
+      {showAuth && <AuthModal initialMode="signin" onClose={() => setShowAuth(false)} />}
+
+      {/* Checkout success */}
       {showCheckout && (
         <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-md flex items-center justify-center p-5 animate-fade-in">
           <div className="bg-surface border border-border rounded-3xl p-8 max-w-md w-full text-center">

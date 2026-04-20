@@ -104,38 +104,43 @@ export const userService = {
 
 // Tickets services
 export const ticketsService = {
-  getTickets: async (userId: string) => {
+  getMyTickets: async (userId: string) => {
     const { data, error } = await supabase
       .from('tickets')
       .select('*, events(*)')
       .eq('user_id', userId)
+      .eq('status', 'active')
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data;
   },
 
-  saveTicket: async (eventId: string, userId: string, ticketType: string, price: number) => {
+  buyTicket: async (params: {
+    userId: string;
+    eventId: string;
+    ticketType: string;
+    price: number;
+    serviceFee: number;
+    total: number;
+    paymentMode: 'full' | 'plan';
+  }) => {
+    // Simple QR hash — in production this would be signed and rotate server-side
+    const qrHash = `GB-${Math.random().toString(36).slice(2, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
     const { data, error } = await supabase
       .from('tickets')
       .insert({
-        event_id: eventId,
-        user_id: userId,
-        ticket_type: ticketType,
-        price,
-        payment_status: 'pending',
+        user_id: params.userId,
+        event_id: params.eventId,
+        ticket_type: params.ticketType,
+        price: params.price,
+        service_fee: params.serviceFee,
+        total: params.total,
+        payment_mode: params.paymentMode,
+        payment_status: params.paymentMode === 'full' ? 'paid' : 'partially_paid',
+        qr_hash: qrHash,
+        status: 'active',
       })
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  },
-
-  confirmPayment: async (ticketId: string) => {
-    const { data, error } = await supabase
-      .from('tickets')
-      .update({ payment_status: 'completed' })
-      .eq('id', ticketId)
-      .select()
+      .select('*, events(*)')
       .single();
     if (error) throw error;
     return data;
