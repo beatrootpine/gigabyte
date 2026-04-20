@@ -39,7 +39,10 @@ export const DiscoveryScreen = () => {
     }
   };
 
-  const cityEvents = events.filter(e => e.city === selectedCity);
+  // Only show events in the future — safety net in case demo data goes stale
+  const now = new Date();
+  const upcomingEvents = events.filter(e => e.date && new Date(e.date) > now);
+  const cityEvents = upcomingEvents.filter(e => e.city === selectedCity);
   const filteredEvents = cityEvents.filter(event => {
     if (selectedCategory && event.category !== selectedCategory) return false;
     if (searchQuery) {

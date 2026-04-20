@@ -44,15 +44,19 @@ export const authService = {
 // Events services
 export const eventsService = {
   getEvents: async (city?: string, category?: string) => {
-    let query = supabase.from('events').select('*');
-    
+    // Only return events that haven't happened yet
+    let query = supabase
+      .from('events')
+      .select('*')
+      .gte('date', new Date().toISOString());
+
     if (city) {
       query = query.eq('city', city);
     }
     if (category) {
       query = query.eq('category', category);
     }
-    
+
     const { data, error } = await query.order('date', { ascending: true });
     if (error) throw error;
     return data;
