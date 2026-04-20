@@ -1,19 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, Building2, Shield, ArrowRight, User as UserIcon, Ticket, Bookmark, LogOut, Mail, Crown, Clock, XCircle } from 'lucide-react';
+import { Sparkles, Building2, Shield, ArrowRight, User as UserIcon, Ticket, Bookmark, LogOut, Mail, Crown, Clock, XCircle, CreditCard, Calendar, MapPin } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { AuthModal } from '../components/AuthModal';
 import { OrganizerApplicationModal } from '../components/OrganizerApplicationModal';
+import { SmartImage } from '../components/SmartImage';
 import { SubscriptionScreen } from './SubscriptionScreen';
 import { BrandMarketplaceScreen } from './BrandMarketplaceScreen';
 import { OrganizerConsole } from './OrganizerConsole';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile } from '../hooks/useUserProfile';
+import { useDashboardStats, UpcomingTicket } from '../hooks/useDashboardStats';
 import { organizerApplicationsService } from '../services/supabase';
+import { formatCurrency } from '../utils/theme';
 
 export const CustomerDashboard = () => {
   const { user, loading, signOut } = useAuth();
   const { profile } = useUserProfile();
+  const dashboardData = useDashboardStats();
   const [showSubscription, setShowSubscription] = useState(false);
   const [showBrands, setShowBrands] = useState(false);
   const [showOrganizer, setShowOrganizer] = useState(false);
@@ -78,6 +82,7 @@ export const CustomerDashboard = () => {
             tier={tier}
             role={role}
             application={application}
+            dashboardData={dashboardData}
             onOpenSubscription={() => setShowSubscription(true)}
             onOpenBrands={() => setShowBrands(true)}
             onOpenOrganizer={() => setShowOrganizer(true)}
@@ -123,6 +128,7 @@ const AuthedDashboard = ({
   tier,
   role,
   application,
+  dashboardData,
   onOpenSubscription,
   onOpenBrands,
   onOpenOrganizer,
@@ -134,18 +140,37 @@ const AuthedDashboard = ({
   tier: 'free' | 'pro' | 'premium';
   role: 'user' | 'organizer' | 'admin';
   application: any;
+  dashboardData: ReturnType<typeof useDashboardStats>;
   onOpenSubscription: () => void;
   onOpenBrands: () => void;
   onOpenOrganizer: () => void;
   onApplyOrganizer: () => void;
   onSignOut: () => void;
 }) => {
-  // These will be real queries once tickets exist. Start at 0 for new users.
+  const { stats: statsData, upcoming, loading: statsLoading, error: statsError } = dashboardData;
+
+  // Build display stats from real queries
   const stats = [
-    { label: 'Tickets', value: '0', sub: 'In your wallet' },
-    { label: 'Spent', value: 'R0', sub: 'This year' },
-    { label: 'Upcoming', value: '0', sub: 'Events booked' },
-    { label: 'Saved', value: '0', sub: 'Bookmarked events' },
+    {
+      label: 'Tickets',
+      value: statsLoading ? '—' : String(statsData.ticketsCount),
+      sub: statsData.ticketsCount === 1 ? 'Active ticket' : 'Active tickets',
+    },
+    {
+      label: 'Spent',
+      value: statsLoading ? '—' : formatCurrency(statsData.spentThisYear).replace('.00', ''),
+      sub: 'This year',
+    },
+    {
+      label: 'Upcoming',
+      value: statsLoading ? '—' : String(statsData.upcomingCount),
+      sub: statsData.upcomingCount === 1 ? 'Event booked' : 'Events booked',
+    },
+    {
+      label: 'Saved',
+      value: statsLoading ? '—' : String(statsData.savedCount),
+      sub: 'Bookmarked events',
+    },
   ];
 
   const tierConfig = {
@@ -174,9 +199,17 @@ const AuthedDashboard = ({
           Welcome{firstName ? `, ${firstName}` : ''}.
         </h1>
         <p className="text-text-muted text-sm md:text-base mt-3 max-w-md">
-          Ready to find your next night out? Discover events and book in seconds.
+          {statsData.ticketsCount > 0
+            ? `You have ${statsData.upcomingCount} upcoming ${statsData.upcomingCount === 1 ? 'event' : 'events'}. See you there.`
+            : 'Ready to find your next night out? Discover events and book in seconds.'}
         </p>
       </section>
+
+      {statsError && (
+        <div className="mb-6 bg-error/10 border border-error/20 rounded-xl p-3">
+          <p className="text-xs text-error">{statsError}</p>
+        </div>
+      )}
 
       {/* Stats */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
@@ -193,18 +226,34 @@ const AuthedDashboard = ({
         ))}
       </section>
 
-      {/* Empty state encouragement */}
-      <section className="mb-8 bg-surface border border-border rounded-3xl p-6 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-surface-2 flex items-center justify-center mx-auto mb-4">
-          <Ticket size={22} className="text-text-muted" strokeWidth={2} />
-        </div>
-        <h3 className="font-display text-lg font-bold text-text tracking-tighter mb-2">
-          No tickets yet
-        </h3>
-        <p className="text-sm text-text-muted mb-5 max-w-xs mx-auto">
-          Head to Discover to find something worth your Friday night.
-        </p>
-      </section>
+      {/* Upcoming events preview OR empty state */}
+      {upcoming.length > 0 ? (
+        <section className="mb-8">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="font-display text-lg font-bold text-text tracking-tighter">
+              Your next events
+            </h2>
+            <span className="font-mono text-[10px] text-text-subtle uppercase tracking-wider">
+              {statsData.upcomingCount} upcoming
+            </span>
+          </div>
+          <div className="space-y-3">
+            {upcoming.map(ticket => <UpcomingTicketRow key={ticket.id} ticket={ticket} />)}
+          </div>
+        </section>
+      ) : !statsLoading && (
+        <section className="mb-8 bg-surface border border-border rounded-3xl p-6 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-surface-2 flex items-center justify-center mx-auto mb-4">
+            <Ticket size={22} className="text-text-muted" strokeWidth={2} />
+          </div>
+          <h3 className="font-display text-lg font-bold text-text tracking-tighter mb-2">
+            No tickets yet
+          </h3>
+          <p className="text-sm text-text-muted mb-5 max-w-xs mx-auto">
+            Head to Discover to find something worth your Friday night.
+          </p>
+        </section>
+      )}
 
       {/* Pro upsell — only for free tier */}
       {tier === 'free' && (
@@ -576,5 +625,60 @@ const LoggedOutDashboard = ({
         </button>
       </section>
     </>
+  );
+};
+
+// ============== UPCOMING TICKET ROW ==============
+const UpcomingTicketRow = ({ ticket }: { ticket: UpcomingTicket }) => {
+  const date = new Date(ticket.date);
+  const day = date.toLocaleDateString('en-ZA', { day: '2-digit' });
+  const month = date.toLocaleDateString('en-ZA', { month: 'short' }).toUpperCase();
+  const weekday = date.toLocaleDateString('en-ZA', { weekday: 'short' }).toUpperCase();
+
+  const onPlan = ticket.plan_installments_total != null && ticket.payment_status !== 'paid';
+  const planProgress = onPlan && ticket.plan_installments_paid != null && ticket.plan_installments_total != null
+    ? Math.round((ticket.plan_installments_paid / ticket.plan_installments_total) * 100)
+    : 100;
+
+  return (
+    <div className="bg-surface border border-border rounded-2xl p-4 flex items-center gap-4">
+      <div className="w-14 h-14 rounded-xl overflow-hidden bg-surface-2 flex-shrink-0 relative">
+        <SmartImage src={ticket.event_image} alt={ticket.event_title} seed={ticket.id} className="w-full h-full object-cover" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-1">
+          <p className="font-display font-semibold text-sm text-text line-clamp-1">{ticket.event_title}</p>
+          {onPlan && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold font-mono uppercase tracking-wider bg-electric/10 text-electric flex-shrink-0">
+              <CreditCard size={8} strokeWidth={2.5} />
+              {ticket.plan_installments_paid}/{ticket.plan_installments_total}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 text-xs text-text-muted">
+          <span className="inline-flex items-center gap-1">
+            <Calendar size={10} strokeWidth={2} />
+            {weekday} {day} {month}
+          </span>
+          <span className="w-1 h-1 rounded-full bg-border-strong" />
+          <span className="inline-flex items-center gap-1 line-clamp-1">
+            <MapPin size={10} strokeWidth={2} />
+            {ticket.venue}
+          </span>
+        </div>
+        {onPlan && (
+          <div className="h-1 bg-surface-2 rounded-full overflow-hidden mt-2">
+            <div className="h-full bg-electric rounded-full" style={{ width: `${planProgress}%` }} />
+          </div>
+        )}
+      </div>
+      <span className={`px-2 py-1 rounded-full text-[10px] font-semibold flex-shrink-0 ${
+        ticket.payment_status === 'paid'
+          ? 'bg-success/10 text-success'
+          : 'bg-electric/10 text-electric'
+      }`}>
+        {ticket.payment_status === 'paid' ? 'Paid' : 'Partial'}
+      </span>
+    </div>
   );
 };
