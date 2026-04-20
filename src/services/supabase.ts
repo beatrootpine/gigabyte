@@ -76,6 +76,7 @@ export const eventsService = {
     const { data, error } = await supabase
       .from('events')
       .select('*')
+      .gte('date', new Date().toISOString())
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`);
     if (error) throw error;
     return data;
