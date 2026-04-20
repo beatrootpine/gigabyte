@@ -6,6 +6,7 @@ import { Event } from '../types';
 import { eventsService } from '../services/supabase';
 import { formatCurrency } from '../utils/theme';
 import { SmartImage } from '../components/SmartImage';
+import { AdminOrganizerApplications } from './AdminOrganizerApplications';
 
 export const AdminDashboard = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -107,6 +108,9 @@ export const AdminDashboard = () => {
             </div>
           ))}
         </section>
+
+        {/* Organizer applications review queue */}
+        <AdminOrganizerApplications />
 
         {/* Two-column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">

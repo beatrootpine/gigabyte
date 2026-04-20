@@ -23,10 +23,12 @@ export const AuthModal = ({ onClose, initialMode = 'signin' }: AuthModalProps) =
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [accountType, setAccountType] = useState<'attendee' | 'organizer'>('attendee');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [demoSigningIn, setDemoSigningIn] = useState<string | null>(null);
+  const [signupStep, setSignupStep] = useState<'choose_type' | 'details'>('choose_type');
 
   const handleDemoSignIn = async (demoEmail: string) => {
     setError(null);
@@ -64,8 +66,16 @@ export const AuthModal = ({ onClose, initialMode = 'signin' }: AuthModalProps) =
       if (error) {
         setError(error);
       } else {
-        setSuccessMessage('Account created! Check your email to confirm, or sign in if confirmation is disabled.');
-        setTimeout(() => { onClose(); }, 2000);
+        // Flag the intent so the dashboard can prompt an organizer application
+        if (accountType === 'organizer') {
+          sessionStorage.setItem('gigabyte-pending-organizer-application', '1');
+        }
+        setSuccessMessage(
+          accountType === 'organizer'
+            ? "Account created! Complete your organizer application on the next screen."
+            : "Account created! You're all set."
+        );
+        setTimeout(() => { onClose(); }, 1500);
       }
     } else {
       const { error } = await signIn(email, password);
@@ -99,7 +109,7 @@ export const AuthModal = ({ onClose, initialMode = 'signin' }: AuthModalProps) =
           {/* Mode tabs */}
           <div className="flex gap-1 p-1 bg-surface-2 border border-border rounded-full mb-6">
             <button
-              onClick={() => { setMode('signin'); setError(null); }}
+              onClick={() => { setMode('signin'); setError(null); setSignupStep('choose_type'); }}
               className={`flex-1 h-9 rounded-full text-xs font-semibold transition-all ${
                 mode === 'signin' ? 'bg-inverse text-inverse-text' : 'text-text-muted'
               }`}
@@ -107,7 +117,7 @@ export const AuthModal = ({ onClose, initialMode = 'signin' }: AuthModalProps) =
               Sign in
             </button>
             <button
-              onClick={() => { setMode('signup'); setError(null); }}
+              onClick={() => { setMode('signup'); setError(null); setSignupStep('choose_type'); }}
               className={`flex-1 h-9 rounded-full text-xs font-semibold transition-all ${
                 mode === 'signup' ? 'bg-inverse text-inverse-text' : 'text-text-muted'
               }`}
@@ -203,13 +213,61 @@ export const AuthModal = ({ onClose, initialMode = 'signin' }: AuthModalProps) =
             // ============ SIGN IN / SIGN UP ============
             <>
               <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
-                {mode === 'signin' ? 'Welcome back' : 'Create account'}
+                {mode === 'signin' ? 'Welcome back' : signupStep === 'choose_type' ? 'Create account' : `Joining as ${accountType === 'attendee' ? 'an attendee' : 'an organizer'}`}
               </p>
               <h2 className="font-display text-2xl md:text-3xl font-bold text-text tracking-tighter leading-tight mb-6">
-                {mode === 'signin' ? 'Sign in to Gigabyte' : 'Join Gigabyte.'}
+                {mode === 'signin'
+                  ? 'Sign in to Gigabyte'
+                  : signupStep === 'choose_type'
+                    ? 'How will you use Gigabyte?'
+                    : 'Your details.'}
               </h2>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === 'signup' && signupStep === 'choose_type' ? (
+                <div className="space-y-3">
+                  <button
+                    onClick={() => { setAccountType('attendee'); setSignupStep('details'); }}
+                    className="w-full flex items-center gap-4 p-5 bg-surface-2 hover:bg-surface-3 border border-border rounded-2xl transition-colors text-left"
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-electric/10 flex items-center justify-center flex-shrink-0">
+                      <UserIcon size={18} className="text-electric" strokeWidth={2} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-display font-bold text-base text-text">I'm an attendee</p>
+                      <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
+                        Discover events, buy tickets, transfer and resell safely.
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { setAccountType('organizer'); setSignupStep('details'); }}
+                    className="w-full flex items-center gap-4 p-5 bg-surface-2 hover:bg-surface-3 border border-border rounded-2xl transition-colors text-left"
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-success/10 flex items-center justify-center flex-shrink-0">
+                      <UserIcon size={18} className="text-success" strokeWidth={2} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-display font-bold text-base text-text">I'm an event organizer</p>
+                      <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
+                        List events, sell tickets, manage attendees. Requires application review.
+                      </p>
+                    </div>
+                  </button>
+                  <p className="font-mono text-[10px] text-text-subtle uppercase tracking-wider text-center mt-5">
+                    Admin access is granted by Gigabyte staff only
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {mode === 'signup' && (
+                    <button
+                      onClick={() => setSignupStep('choose_type')}
+                      className="mb-4 text-xs text-text-muted hover:text-text transition-colors inline-flex items-center gap-1"
+                    >
+                      ← Change account type
+                    </button>
+                  )}
+                  <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === 'signup' && (
                   <div>
                     <label className="flex items-center gap-2 font-mono text-[10px] text-text-subtle uppercase tracking-wider mb-2">
@@ -274,6 +332,8 @@ export const AuthModal = ({ onClose, initialMode = 'signin' }: AuthModalProps) =
                   {mode === 'signin' ? 'Sign in' : 'Create account'}
                 </button>
               </form>
+                </>
+              )}
             </>
           )}
 

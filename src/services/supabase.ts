@@ -189,6 +189,86 @@ export const brandsService = {
   },
 };
 
+// Organizer applications service
+export const organizerApplicationsService = {
+  // Submit a new application
+  submit: async (params: {
+    userId: string;
+    companyName: string;
+    website?: string;
+    eventHistory: string;
+    phone?: string;
+  }) => {
+    const { data, error } = await supabase
+      .from('organizer_applications')
+      .insert({
+        user_id: params.userId,
+        company_name: params.companyName,
+        website: params.website || null,
+        event_history: params.eventHistory,
+        phone: params.phone || null,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  // Get the current user's latest application (if any)
+  getMine: async (userId: string) => {
+    const { data, error } = await supabase
+      .from('organizer_applications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  // Admin: list all pending applications with user profile joined
+  listPending: async () => {
+    const { data, error } = await supabase
+      .from('organizer_applications')
+      .select('*, users!organizer_applications_user_id_fkey(email, full_name)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return data;
+  },
+
+  // Admin: list everything (all statuses)
+  listAll: async () => {
+    const { data, error } = await supabase
+      .from('organizer_applications')
+      .select('*, users!organizer_applications_user_id_fkey(email, full_name)')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+
+  // Admin: approve an application (calls the RPC)
+  approve: async (applicationId: string, notes?: string) => {
+    const { data, error } = await supabase.rpc('admin_approve_organizer', {
+      application_id: applicationId,
+      notes: notes || null,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  // Admin: reject an application
+  reject: async (applicationId: string, notes?: string) => {
+    const { data, error } = await supabase.rpc('admin_reject_organizer', {
+      application_id: applicationId,
+      notes: notes || null,
+    });
+    if (error) throw error;
+    return data;
+  },
+};
+
 // Subscriptions services
 export const subscriptionService = {
   getSubscription: async (userId: string) => {

@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { Sparkles, Building2, Shield, ArrowRight, User as UserIcon, Ticket, Bookmark, LogOut, Mail, Crown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sparkles, Building2, Shield, ArrowRight, User as UserIcon, Ticket, Bookmark, LogOut, Mail, Crown, Clock, XCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { AuthModal } from '../components/AuthModal';
+import { OrganizerApplicationModal } from '../components/OrganizerApplicationModal';
 import { SubscriptionScreen } from './SubscriptionScreen';
 import { BrandMarketplaceScreen } from './BrandMarketplaceScreen';
 import { OrganizerConsole } from './OrganizerConsole';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile } from '../hooks/useUserProfile';
+import { organizerApplicationsService } from '../services/supabase';
 
 export const CustomerDashboard = () => {
   const { user, loading, signOut } = useAuth();
@@ -16,11 +18,46 @@ export const CustomerDashboard = () => {
   const [showBrands, setShowBrands] = useState(false);
   const [showOrganizer, setShowOrganizer] = useState(false);
   const [showAuth, setShowAuth] = useState<false | 'signin' | 'signup'>(false);
+  const [showApplication, setShowApplication] = useState(false);
+  const [application, setApplication] = useState<any>(null);
+  const [appLoading, setAppLoading] = useState(false);
 
   const fullName = profile?.full_name || (user?.user_metadata?.full_name as string) || '';
   const firstName = fullName.split(' ')[0] || user?.email?.split('@')[0] || '';
   const tier = profile?.subscription_tier || 'free';
   const role = profile?.role || 'user';
+
+  // Load any existing organizer application for this user
+  const refreshApplication = async () => {
+    if (!user) { setApplication(null); return; }
+    setAppLoading(true);
+    try {
+      const app = await organizerApplicationsService.getMine(user.id);
+      setApplication(app);
+    } catch {
+      setApplication(null);
+    } finally {
+      setAppLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshApplication();
+  }, [user]);
+
+  // If signup flagged organizer intent, auto-open the application modal
+  useEffect(() => {
+    if (
+      user &&
+      profile &&
+      role === 'user' &&
+      !application &&
+      !appLoading &&
+      sessionStorage.getItem('gigabyte-pending-organizer-application') === '1'
+    ) {
+      setShowApplication(true);
+    }
+  }, [user, profile, role, application, appLoading]);
 
   return (
     <div className="min-h-screen bg-bg pb-28">
@@ -40,9 +77,11 @@ export const CustomerDashboard = () => {
             email={user.email || ''}
             tier={tier}
             role={role}
+            application={application}
             onOpenSubscription={() => setShowSubscription(true)}
             onOpenBrands={() => setShowBrands(true)}
             onOpenOrganizer={() => setShowOrganizer(true)}
+            onApplyOrganizer={() => setShowApplication(true)}
             onSignOut={signOut}
           />
         ) : (
@@ -58,6 +97,12 @@ export const CustomerDashboard = () => {
       {showSubscription && <SubscriptionScreen onClose={() => setShowSubscription(false)} />}
       {showBrands && <BrandMarketplaceScreen onClose={() => setShowBrands(false)} />}
       {showOrganizer && <OrganizerConsole onClose={() => setShowOrganizer(false)} />}
+      {showApplication && (
+        <OrganizerApplicationModal
+          onClose={() => setShowApplication(false)}
+          onSubmitted={refreshApplication}
+        />
+      )}
       {showAuth && <AuthModal initialMode={showAuth} onClose={() => setShowAuth(false)} />}
     </div>
   );
@@ -77,18 +122,22 @@ const AuthedDashboard = ({
   email,
   tier,
   role,
+  application,
   onOpenSubscription,
   onOpenBrands,
   onOpenOrganizer,
+  onApplyOrganizer,
   onSignOut,
 }: {
   firstName: string;
   email: string;
   tier: 'free' | 'pro' | 'premium';
   role: 'user' | 'organizer' | 'admin';
+  application: any;
   onOpenSubscription: () => void;
   onOpenBrands: () => void;
   onOpenOrganizer: () => void;
+  onApplyOrganizer: () => void;
   onSignOut: () => void;
 }) => {
   // These will be real queries once tickets exist. Start at 0 for new users.
@@ -117,11 +166,9 @@ const AuthedDashboard = ({
             <TierIcon size={9} strokeWidth={2.5} />
             Gigabyte {tierConfig.label}
           </span>
-          {role !== 'user' && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold font-mono uppercase tracking-wider bg-success/10 text-success">
-              {role}
-            </span>
-          )}
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold font-mono uppercase tracking-wider bg-surface-2 text-text-muted`}>
+            {role === 'user' ? 'Attendee' : role === 'organizer' ? 'Organizer' : 'Admin'}
+          </span>
         </div>
         <h1 className="font-display text-3xl md:text-5xl font-extrabold text-text tracking-tightest leading-[0.95] capitalize">
           Welcome{firstName ? `, ${firstName}` : ''}.
@@ -211,7 +258,7 @@ const AuthedDashboard = ({
         </section>
       )}
 
-      {/* Organizer panel */}
+      {/* Organizer panel — only for approved organizers */}
       {role === 'organizer' && (
         <section className="mb-8">
           <div className="bg-success/5 border border-success/20 rounded-3xl p-6">
@@ -234,6 +281,79 @@ const AuthedDashboard = ({
               Open organizer console <ArrowRight size={14} strokeWidth={2.5} />
             </button>
           </div>
+        </section>
+      )}
+
+      {/* Application status card — for attendees with a pending or rejected application */}
+      {role === 'user' && application && application.status === 'pending' && (
+        <section className="mb-8">
+          <div className="bg-electric/5 border border-electric/20 rounded-3xl p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock size={14} className="text-electric" strokeWidth={2.5} />
+              <p className="font-mono text-[10px] text-electric uppercase tracking-wider">
+                Application under review
+              </p>
+            </div>
+            <h3 className="font-display text-xl font-bold text-text tracking-tighter mb-2">
+              We're reviewing your organizer application
+            </h3>
+            <p className="text-sm text-text-muted mb-2 max-w-md">
+              Our team verifies every organizer within 1–2 business days. You'll get an email when a decision is made.
+            </p>
+            <p className="text-xs text-text-subtle font-mono">
+              Submitted {new Date(application.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
+              {application.company_name && ` · ${application.company_name}`}
+            </p>
+          </div>
+        </section>
+      )}
+
+      {role === 'user' && application && application.status === 'rejected' && (
+        <section className="mb-8">
+          <div className="bg-error/5 border border-error/20 rounded-3xl p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <XCircle size={14} className="text-error" strokeWidth={2.5} />
+              <p className="font-mono text-[10px] text-error uppercase tracking-wider">
+                Application not approved
+              </p>
+            </div>
+            <h3 className="font-display text-xl font-bold text-text tracking-tighter mb-2">
+              Your organizer application wasn't approved
+            </h3>
+            {application.review_notes && (
+              <p className="text-sm text-text-muted mb-3 max-w-md italic">
+                "{application.review_notes}"
+              </p>
+            )}
+            <p className="text-sm text-text-muted mb-4 max-w-md">
+              You can still use Gigabyte as an attendee. Contact support if you'd like to appeal.
+            </p>
+            <button
+              onClick={onApplyOrganizer}
+              className="h-11 px-5 bg-surface-2 text-text rounded-full font-semibold text-sm border border-border hover:bg-surface-3 transition-colors"
+            >
+              Submit a new application
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* Apply to be an organizer — for attendees without an application yet */}
+      {role === 'user' && !application && (
+        <section className="mb-8">
+          <button
+            onClick={onApplyOrganizer}
+            className="w-full bg-surface border border-border rounded-2xl p-5 text-left hover:bg-surface-2 transition-colors flex items-center gap-4"
+          >
+            <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center flex-shrink-0">
+              <Building2 size={16} className="text-success" strokeWidth={2} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-display font-semibold text-sm text-text">Host events on Gigabyte?</p>
+              <p className="text-xs text-text-muted mt-0.5">Apply to become an organizer — reviewed in 1–2 days.</p>
+            </div>
+            <ArrowRight size={16} className="text-text-subtle flex-shrink-0" strokeWidth={2} />
+          </button>
         </section>
       )}
 
